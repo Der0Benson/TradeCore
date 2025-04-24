@@ -12,53 +12,77 @@ public class CacheInfoScreen extends Screen {
             .withZone(ZoneId.systemDefault());
     private String updateMessage = null;
     private long updateMessageTimeout = 0;
+    private ButtonWidget toggleButton;
 
     public CacheInfoScreen() {
-        super(Text.literal("Cache-Informationen"));
+        super(Text.literal("Cache-Informationen & Einstellungen"));
+    }
+
+    private Text getToggleButtonText() {
+        return Text.literal("Anzeige: " + (TradeCore.showPricesOnlyOnShift ? "Nur bei Shift" : "Immer"));
     }
 
     @Override
     protected void init() {
-        // Schließen-Button
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Schließen"), button -> this.close())
-                .dimensions(this.width / 2 - 50, this.height / 2 + 20, 100, 20)
-                .build());
+        int buttonWidth = 150;
+        int buttonX = this.width / 2 - buttonWidth / 2;
+        int buttonY = this.height / 2 - 10;
 
         // Update-Button
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Cache Aktualisieren"), button -> {
                     TradeCore.apiClient.clearCache();
                     this.updateMessage = "Cache wurde aktualisiert!";
-                    this.updateMessageTimeout = System.currentTimeMillis() + 3000; // Nachricht für 3 Sekunden anzeigen
-                }).dimensions(this.width / 2 - 50, this.height / 2 - 10, 100, 20)
+                    this.updateMessageTimeout = System.currentTimeMillis() + 3000;
+                }).dimensions(buttonX, buttonY, buttonWidth, 20)
+                .build());
+
+        // Toggle-Button für Anzeige-Modus
+        buttonY += 24;
+        toggleButton = this.addDrawableChild(ButtonWidget.builder(getToggleButtonText(), button -> {
+                    // 1. Wert umschalten
+                    TradeCore.showPricesOnlyOnShift = !TradeCore.showPricesOnlyOnShift;
+                    // 2. Button-Text aktualisieren
+                    button.setMessage(getToggleButtonText());
+                    // 3. NEU: Geänderte Einstellung speichern
+                    TradeCoreConfig.saveConfig();
+                    TradeCore.LOGGER.info("Einstellung 'showPricesOnlyOnShift' gespeichert: {}", TradeCore.showPricesOnlyOnShift); // Log für Bestätigung
+                }).dimensions(buttonX, buttonY, buttonWidth, 20)
+                .build());
+
+        // Schließen-Button
+        buttonY += 24;
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Schließen"), button -> this.close())
+                .dimensions(buttonX, buttonY, buttonWidth, 20)
                 .build());
     }
 
     @Override
     public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-        // Hintergrund rendern
         this.renderBackground(context, mouseX, mouseY, delta);
-        super.render(context, mouseX, mouseY, delta);
 
-        // Letzte Aktualisierungszeit anzeigen
+        // Letzte Aktualisierungszeit
         long lastUpdate = TradeCore.apiClient.getLastUpdateTimestamp();
         String lastUpdateText = lastUpdate == 0
                 ? "Keine Aktualisierung bisher"
                 : "Letzte Aktualisierung: " + FORMATTER.format(Instant.ofEpochSecond(lastUpdate));
-
         context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(lastUpdateText),
-                this.width / 2, this.height / 2 - 30, 0xFFFFFF);
+                this.width / 2, this.height / 2 - 50, 0xFFFFFF);
 
-        // Bestätigungsnachricht anzeigen, falls vorhanden
+        // Buttons rendern
+        super.render(context, mouseX, mouseY, delta);
+
+        // Bestätigungsnachricht
         if (updateMessage != null && System.currentTimeMillis() < updateMessageTimeout) {
+            int messageY = this.height / 2 - 10 + 24 + 24 + 24;
             context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(updateMessage),
-                    this.width / 2, this.height / 2 + 40, 0x00FF00);
+                    this.width / 2, messageY, 0x00FF00);
         } else {
-            updateMessage = null; // Nachricht entfernen, wenn Timeout abgelaufen
+            updateMessage = null;
         }
     }
 
     @Override
     public boolean shouldPause() {
-        return false; // Spiel nicht pausieren, während das Menü geöffnet ist
+        return false;
     }
 }
