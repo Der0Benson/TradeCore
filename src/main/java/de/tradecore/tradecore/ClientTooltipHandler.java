@@ -17,12 +17,12 @@ public class ClientTooltipHandler implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Tastenkombination für "-" registrieren
+        // Tastenkombination für "Pfeiltaste nach oben" registrieren
         openCacheInfoKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.tradecore.open_cache_info",
+                "key.tradecore.open_cache_info", // Dieser Schlüssel wird in der Sprachdatei übersetzt
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_MINUS,
-                "category.tradecore"
+                GLFW.GLFW_KEY_UP,
+                "category.tradecore" // Dieser Schlüssel wird in der Sprachdatei übersetzt
         ));
 
         // Tooltip-Handler

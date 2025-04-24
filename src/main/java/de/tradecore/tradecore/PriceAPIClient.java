@@ -69,6 +69,13 @@ public class PriceAPIClient {
         return lastUpdateTimestamp;
     }
 
+    // Methode zum Leeren des Caches
+    public void clearCache() {
+        priceCache.clear();
+        lastUpdateTimestamp = 0;
+        TradeCore.LOGGER.info("Cache wurde geleert.");
+    }
+
     // Innere Klasse für Cache-Einträge
     private static class CacheEntry {
         final PriceResult priceResult;

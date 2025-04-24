@@ -10,6 +10,8 @@ import java.time.format.DateTimeFormatter;
 public class CacheInfoScreen extends Screen {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
             .withZone(ZoneId.systemDefault());
+    private String updateMessage = null;
+    private long updateMessageTimeout = 0;
 
     public CacheInfoScreen() {
         super(Text.literal("Cache-Informationen"));
@@ -17,9 +19,17 @@ public class CacheInfoScreen extends Screen {
 
     @Override
     protected void init() {
-        // Schließen-Button hinzufügen
+        // Schließen-Button
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Schließen"), button -> this.close())
                 .dimensions(this.width / 2 - 50, this.height / 2 + 20, 100, 20)
+                .build());
+
+        // Update-Button
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Cache Aktualisieren"), button -> {
+                    TradeCore.apiClient.clearCache();
+                    this.updateMessage = "Cache wurde aktualisiert!";
+                    this.updateMessageTimeout = System.currentTimeMillis() + 3000; // Nachricht für 3 Sekunden anzeigen
+                }).dimensions(this.width / 2 - 50, this.height / 2 - 10, 100, 20)
                 .build());
     }
 
@@ -36,7 +46,15 @@ public class CacheInfoScreen extends Screen {
                 : "Letzte Aktualisierung: " + FORMATTER.format(Instant.ofEpochSecond(lastUpdate));
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(lastUpdateText),
-                this.width / 2, this.height / 2 - 10, 0xFFFFFF);
+                this.width / 2, this.height / 2 - 30, 0xFFFFFF);
+
+        // Bestätigungsnachricht anzeigen, falls vorhanden
+        if (updateMessage != null && System.currentTimeMillis() < updateMessageTimeout) {
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(updateMessage),
+                    this.width / 2, this.height / 2 + 40, 0x00FF00);
+        } else {
+            updateMessage = null; // Nachricht entfernen, wenn Timeout abgelaufen
+        }
     }
 
     @Override
