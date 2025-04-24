@@ -4,7 +4,7 @@ plugins {
 }
 
 // Projekt-Eigenschaften definieren
-version = "1.4.0"
+version = "1.4.1"
 group = "de.tradecore"
 def archives_base_name = "tradecore"
 def minecraft_version = "1.21.4"
