@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "tradecore",
+  "version": "${version}",
+  "name": "TradeCore",
+  "description": "TradeCore Preislisten ingame direkt und ohne viel Traha",
+  "authors": ["Der_Benson_"],
+  "contact": {},
+  "icon": "TradeCore_Profilbild_v1.png",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["de.tradecore.tradecore.TradeCore"],
+    "client": ["de.tradecore.tradecore.ClientTooltipHandler"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "fabric": "*",
+    "minecraft": ">=1.20.1"
+  },
+  "custom": {
+    "fabric:keybindings": {
+      "category.tradecore": "TradeCore"
+    }
+  }
+}
