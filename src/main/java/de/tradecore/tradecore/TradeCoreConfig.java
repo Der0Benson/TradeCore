@@ -1,6 +1,6 @@
 package de.tradecore.tradecore;
 
-import net.fabricmc.loader.api.FabricLoader; // Import für den Config-Pfad
+import net.fabricmc.loader.api.FabricLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,60 +9,71 @@ import java.util.Properties;
 public class TradeCoreConfig {
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(TradeCore.MOD_ID + ".properties");
+    // Nur noch die ursprünglichen Keys
     private static final String SHOW_ON_SHIFT_KEY = "showPricesOnlyOnShift";
+    private static final String LAST_FETCH_TIMESTAMP_KEY = "lastManualFetchTimestamp";
+
+    // Nur noch die ursprünglichen statischen Variablen
+    public static boolean showPricesOnlyOnShift = false;
+    public static long lastManualFetchTimestamp = 0L;
 
     // Lädt die Konfiguration beim Start
     public static void loadConfig() {
         Properties props = new Properties();
-        // Standardwert setzen, falls die Datei nicht existiert oder der Schlüssel fehlt
         boolean showOnShiftDefault = false;
-        TradeCore.showPricesOnlyOnShift = showOnShiftDefault; // Setze Standardwert zuerst
+        long lastFetchDefault = 0L;
+        showPricesOnlyOnShift = showOnShiftDefault; // Standardwert setzen
+        lastManualFetchTimestamp = lastFetchDefault; // Standardwert setzen
 
         if (Files.exists(CONFIG_PATH)) {
             try (var inputStream = Files.newInputStream(CONFIG_PATH)) {
                 props.load(inputStream);
-                // Lese den Wert, nutze Standardwert bei Fehler oder Fehlen
-                TradeCore.showPricesOnlyOnShift = Boolean.parseBoolean(props.getProperty(SHOW_ON_SHIFT_KEY, String.valueOf(showOnShiftDefault)));
-                TradeCore.LOGGER.info("Konfiguration geladen: {} = {}", SHOW_ON_SHIFT_KEY, TradeCore.showPricesOnlyOnShift);
+                showPricesOnlyOnShift = Boolean.parseBoolean(props.getProperty(SHOW_ON_SHIFT_KEY, String.valueOf(showOnShiftDefault)));
+                try {
+                    lastManualFetchTimestamp = Long.parseLong(props.getProperty(LAST_FETCH_TIMESTAMP_KEY, String.valueOf(lastFetchDefault)));
+                } catch (NumberFormatException e) {
+                    TradeCore.LOGGER.warn("Ungültiger Wert für '{}' in {}. Verwende 0.", LAST_FETCH_TIMESTAMP_KEY, CONFIG_PATH.getFileName());
+                    lastManualFetchTimestamp = lastFetchDefault;
+                }
+                TradeCore.LOGGER.info("Konfiguration geladen: shift={}, lastFetch={}", showPricesOnlyOnShift, lastManualFetchTimestamp);
             } catch (IOException | IllegalArgumentException e) {
-                TradeCore.LOGGER.error("Fehler beim Laden der Konfigurationsdatei {}, verwende Standardwerte.", CONFIG_PATH, e);
-                // Stelle sicher, dass der Standardwert gesetzt ist, falls das Laden fehlschlägt
-                TradeCore.showPricesOnlyOnShift = showOnShiftDefault;
-                // Optional: Versuche, die Datei mit Standardwerten neu zu schreiben
-                saveConfigInternal(props); // Speichert den Standardwert, wenn Laden fehlschlägt
+                TradeCore.LOGGER.error("Fehler beim Laden der Konfig {}, verwende Defaults.", CONFIG_PATH.getFileName(), e);
+                showPricesOnlyOnShift = showOnShiftDefault;
+                lastManualFetchTimestamp = lastFetchDefault;
             }
         } else {
-            TradeCore.LOGGER.info("Konfigurationsdatei {} nicht gefunden, erstelle mit Standardwerten.", CONFIG_PATH);
-            // Speichere die Standardeinstellung, wenn die Datei nicht existiert
-            saveConfigInternal(props);
+            TradeCore.LOGGER.info("Konfig {} nicht gefunden, erstelle Defaults.", CONFIG_PATH.getFileName());
+            saveConfigInternal(props); // Speichere Defaults
         }
     }
 
     // Speichert die aktuelle Konfiguration
-    public static void saveConfig() {
+    public static synchronized void saveConfig() {
         Properties props = new Properties();
+        if (Files.exists(CONFIG_PATH)) {
+            try (var inputStream = Files.newInputStream(CONFIG_PATH)) { props.load(inputStream); }
+            catch (IOException e) { TradeCore.LOGGER.error("Konfig lesen vor Speichern fehlgeschlagen: ", e); }
+        }
         saveConfigInternal(props);
     }
 
-    // Interne Methode zum Speichern, um Code-Duplikation zu vermeiden
-    private static void saveConfigInternal(Properties props) {
-        // Lese vorhandene Properties, falls die Datei existiert, um andere Einstellungen nicht zu überschreiben
-        // (Momentan gibt es nur eine, aber das ist gute Praxis für die Zukunft)
-        if (Files.exists(CONFIG_PATH)) {
-            try (var inputStream = Files.newInputStream(CONFIG_PATH)) {
-                props.load(inputStream);
-            } catch (IOException e) {
-                TradeCore.LOGGER.error("Konnte vorhandene Konfiguration nicht lesen vor dem Speichern: ", e);
-                // Fahre trotzdem fort, um die aktuelle Einstellung zu speichern
-            }
-        }
-
-        props.setProperty(SHOW_ON_SHIFT_KEY, String.valueOf(TradeCore.showPricesOnlyOnShift));
+    // Interne Methode zum Speichern
+    private static synchronized void saveConfigInternal(Properties props) {
+        props.setProperty(SHOW_ON_SHIFT_KEY, String.valueOf(showPricesOnlyOnShift));
+        props.setProperty(LAST_FETCH_TIMESTAMP_KEY, String.valueOf(lastManualFetchTimestamp));
         try (var outputStream = Files.newOutputStream(CONFIG_PATH)) {
             props.store(outputStream, "TradeCore Mod Konfiguration");
-            // Kein extra Log hier, das passiert normalerweise nur bei Änderung durch den User
         } catch (IOException e) {
-            TradeCore.LOGGER.error("Fehler beim Speichern der Konfigurationsdatei {}: ", CONFIG_PATH, e);
+            TradeCore.LOGGER.error("Fehler beim Speichern der Konfig {}: ", CONFIG_PATH.getFileName(), e);
         }
     }
+
+    // Methode zum Aktualisieren des Timestamps (bleibt erhalten für Cooldown)
+    public static synchronized void updateAndSaveLastFetchTimestamp(long timestamp) {
+        lastManualFetchTimestamp = timestamp;
+        saveConfig();
+        TradeCore.LOGGER.info("Cooldown-Zeitstempel gespeichert: {}", lastManualFetchTimestamp);
+    }
+
+    // saveConsentChoice Methode entfernt
 }
