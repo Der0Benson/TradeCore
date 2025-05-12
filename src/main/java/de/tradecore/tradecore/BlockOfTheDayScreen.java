@@ -9,7 +9,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-import java.util.concurrent.CompletableFuture; // Import hinzugefügt
+import java.util.concurrent.CompletableFuture;
 
 public class BlockOfTheDayScreen extends Screen {
 
@@ -32,12 +32,14 @@ public class BlockOfTheDayScreen extends Screen {
     private ButtonWidget voteSchnellButton;
     private ButtonWidget voteLangsamButton;
     private ButtonWidget refreshButton; // Aktualisieren-Button
+    private ButtonWidget editBdtButton; // NEU
 
     // Zustand
     private String currentBdtId = null;
     private boolean canVote = false;
     private boolean isLoadingData = false;
     private boolean isSubmittingVote = false;
+    private long remainingEditCooldown = 0; // NEU: Feld für verbleibenden Cooldown
 
     protected BlockOfTheDayScreen() {
         super(Text.literal("Block des Tages"));
@@ -46,7 +48,9 @@ public class BlockOfTheDayScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        if (this.client == null || TradeCore.apiClient == null) { return; }
+        if (this.client == null || TradeCore.apiClient == null) {
+            return;
+        }
 
         int screenWidth = this.width;
         int screenHeight = this.height;
@@ -94,16 +98,30 @@ public class BlockOfTheDayScreen extends Screen {
         voteStatusDisplayWidget.alignCenter();
         this.addDrawableChild(voteStatusDisplayWidget);
 
-
         // Button zum Erstellen
         int createButtonY = voteButtonY + widgetHeight + spacing + widgetHeight + spacing + 5;
         createBdtButton = ButtonWidget.builder(Text.literal("Neuen BdT erstellen...").formatted(Formatting.GREEN), button -> {
-                    if (this.client != null) { this.client.setScreen(new CreateBdtScreen(this)); }
+                    if (this.client != null) {
+                        this.client.setScreen(new CreateBdtScreen(this));
+                    }
                 })
                 .dimensions(centerX - 100, createButtonY, 200, 20)
                 .build();
         createBdtButton.visible = false;
         this.addDrawableChild(createBdtButton);
+
+        // NEU: Button zum Bearbeiten
+        editBdtButton = ButtonWidget.builder(Text.literal("BdT bearbeiten").formatted(Formatting.YELLOW), button -> {
+                    if (this.client != null) {
+                        String itemName = itemText.getString().replace("Item: ", "").trim();
+                        String gewinn = gewinnText.getString().replace("Gewinn: ", "").trim();
+                        this.client.setScreen(new EditBdtScreen(this, currentBdtId, itemName, gewinn));
+                    }
+                })
+                .dimensions(centerX - 100, createButtonY + 25, 200, 20)
+                .build();
+        editBdtButton.visible = false; // Zunächst unsichtbar
+        this.addDrawableChild(editBdtButton);
 
         // --- Untere Button-Reihe ---
         int bottomButtonWidth = 98;
@@ -112,23 +130,21 @@ public class BlockOfTheDayScreen extends Screen {
         refreshButton = ButtonWidget.builder(Text.literal("Aktualisieren"), button -> {
                     TradeCore.LOGGER.info("Refresh Button geklickt. isLoadingData = {}", isLoadingData);
                     if (!isLoadingData) {
-                        TradeCore.LOGGER.info("-> Starte fetchDataAndUpdateScreen(true)");
+                        TradeCore.LOGGER.info(" -> Starte fetchDataAndUpdateScreen(true)");
                         fetchDataAndUpdateScreen(true); // true für Force Refresh
                     } else {
-                        TradeCore.LOGGER.info("-> Fetch nicht gestartet (isLoadingData ist true).");
+                        TradeCore.LOGGER.info(" -> Fetch nicht gestartet (isLoadingData ist true).");
                     }
                 })
                 .dimensions(centerX - bottomButtonWidth - spacing / 2, bottomButtonY, bottomButtonWidth, 20)
                 .build();
         this.addDrawableChild(refreshButton);
 
-
         // Schließen Button
         closeButton = ButtonWidget.builder(Text.literal("Schließen"), button -> this.close())
                 .dimensions(centerX + spacing / 2, bottomButtonY, bottomButtonWidth, 20)
                 .build();
         this.addDrawableChild(closeButton);
-
 
         // Daten initial abrufen (ohne Force)
         fetchDataAndUpdateScreen(false); // false für initialen Load (Cache OK)
@@ -139,7 +155,7 @@ public class BlockOfTheDayScreen extends Screen {
         TradeCore.LOGGER.info("fetchDataAndUpdateScreen aufgerufen. forceRefresh = {}, Aktueller isLoadingData = {}", forceRefresh, isLoadingData);
 
         if (isLoadingData) {
-            TradeCore.LOGGER.warn("-> Abbruch: isLoadingData ist bereits true.");
+            TradeCore.LOGGER.warn(" -> Abbruch: isLoadingData ist bereits true.");
             return;
         }
         isLoadingData = true;
@@ -169,9 +185,11 @@ public class BlockOfTheDayScreen extends Screen {
                 this.voteResultText = Text.literal("").formatted(Formatting.GRAY);
                 this.voteStatusText = Text.literal("").formatted(Formatting.GRAY);
                 this.canVote = false;
+                this.remainingEditCooldown = 0;
                 if (voteSchnellButton != null) voteSchnellButton.active = false;
                 if (voteLangsamButton != null) voteLangsamButton.active = false;
-                if(createBdtButton != null) createBdtButton.visible = false;
+                if (createBdtButton != null) createBdtButton.visible = false;
+                if (editBdtButton != null) editBdtButton.visible = false;
 
             } else if (result != null) {
                 if (result.found) {
@@ -180,9 +198,14 @@ public class BlockOfTheDayScreen extends Screen {
                     this.gewinnText = Text.literal("Gewinn: ").append(Text.literal(result.gewinn).formatted(Formatting.GOLD));
                     updateVoteDisplay(result.schnellVotes, result.langsamVotes);
                     this.canVote = !result.hasVoted;
+                    this.remainingEditCooldown = result.remainingEditCooldown;
                     updateVoteStatus(result.hasVoted);
                     setFeedback(null, 0);
-                    if(createBdtButton != null) createBdtButton.visible = false;
+                    if (createBdtButton != null) createBdtButton.visible = false;
+                    if (editBdtButton != null) {
+                        editBdtButton.visible = true; // Show edit button if BdT exists
+                        updateEditButtonState();
+                    }
                 } else {
                     this.currentBdtId = null;
                     this.itemText = Text.literal("-").formatted(Formatting.GRAY);
@@ -190,15 +213,21 @@ public class BlockOfTheDayScreen extends Screen {
                     this.voteResultText = Text.literal("").formatted(Formatting.GRAY);
                     this.voteStatusText = Text.literal("").formatted(Formatting.GRAY);
                     this.canVote = false;
+                    this.remainingEditCooldown = 0;
                     if (voteSchnellButton != null) voteSchnellButton.active = false;
                     if (voteLangsamButton != null) voteLangsamButton.active = false;
                     setFeedback(Text.literal(result.message != null ? result.message : "Fehler").formatted(Formatting.RED), 0);
-                    if(createBdtButton != null) { createBdtButton.visible = true; }
-                    else { TradeCore.LOGGER.error("createBdtButton war null in Callback!"); }
+                    if (createBdtButton != null) {
+                        createBdtButton.visible = true;
+                    } else {
+                        TradeCore.LOGGER.error("createBdtButton war null in Callback!");
+                    }
+                    if (editBdtButton != null) editBdtButton.visible = false;
                 }
             } else {
                 TradeCore.LOGGER.error("BdT Ergebnis war null ohne Fehler!");
                 setFeedback(Text.literal("Interner Fehler (Result null)").formatted(Formatting.RED), 5000);
+                this.remainingEditCooldown = 0;
             }
 
             if (itemDisplayWidget != null) itemDisplayWidget.setMessage(itemText);
@@ -216,6 +245,7 @@ public class BlockOfTheDayScreen extends Screen {
         this.voteStatusText = Text.literal("");
         this.currentBdtId = null;
         this.canVote = false;
+        this.remainingEditCooldown = 0;
 
         if (itemDisplayWidget != null) itemDisplayWidget.setMessage(itemText);
         if (gewinnDisplayWidget != null) gewinnDisplayWidget.setMessage(gewinnText);
@@ -224,9 +254,9 @@ public class BlockOfTheDayScreen extends Screen {
         if (voteSchnellButton != null) voteSchnellButton.active = false;
         if (voteLangsamButton != null) voteLangsamButton.active = false;
         if (createBdtButton != null) createBdtButton.visible = false;
+        if (editBdtButton != null) editBdtButton.visible = false;
         TradeCore.LOGGER.info("resetUIState ausgeführt.");
     }
-
 
     private void updateVoteDisplay(int schnellVotes, int langsamVotes) {
         int totalVotes = schnellVotes + langsamVotes;
@@ -234,9 +264,7 @@ public class BlockOfTheDayScreen extends Screen {
         if (totalVotes == 0) {
             result.append(Text.literal("Noch keine Stimmen").formatted(Formatting.GRAY));
         } else {
-            result.append(Text.literal("Schnell: " + schnellVotes).formatted(Formatting.GREEN));
-            result.append(Text.literal(" / ").formatted(Formatting.GRAY));
-            result.append(Text.literal("Langsam: " + langsamVotes).formatted(Formatting.RED));
+            result.append(Text.literal("Schnell: ").formatted(Formatting.GREEN)).append(Text.literal(String.valueOf(schnellVotes))).append(Text.literal(" / ").formatted(Formatting.GRAY)).append(Text.literal("Langsam: ").formatted(Formatting.RED)).append(Text.literal(String.valueOf(langsamVotes)));
         }
         this.voteResultText = result;
         if (voteResultDisplayWidget != null) voteResultDisplayWidget.setMessage(this.voteResultText);
@@ -264,7 +292,7 @@ public class BlockOfTheDayScreen extends Screen {
     private void submitVote(String voteType) {
         TradeCore.LOGGER.info("submitVote aufgerufen für Typ: {}. CanVote={}, isSubmitting={}, currentBdtId={}", voteType, canVote, isSubmittingVote, currentBdtId);
         if (!canVote || isSubmittingVote || currentBdtId == null || this.client == null || this.client.player == null) {
-            TradeCore.LOGGER.warn("-> Abbruch: Bedingungen nicht erfüllt.");
+            TradeCore.LOGGER.warn(" -> Abbruch: Bedingungen nicht erfüllt.");
             return;
         }
         isSubmittingVote = true;
@@ -301,14 +329,31 @@ public class BlockOfTheDayScreen extends Screen {
         this.statusText = message != null ? message : Text.literal("");
     }
 
+    private void updateEditButtonState() {
+        if (editBdtButton == null) return;
+        if (this.currentBdtId != null && this.remainingEditCooldown <= 0) {
+            editBdtButton.active = true;
+            editBdtButton.setMessage(Text.literal("BdT bearbeiten").formatted(Formatting.YELLOW));
+        } else {
+            editBdtButton.active = false;
+            long remainingSeconds = this.remainingEditCooldown / 1000; // Convert milliseconds to seconds
+            long hours = remainingSeconds / 3600;
+            remainingSeconds %= 3600;
+            long minutes = remainingSeconds / 60;
+            // Nur Stunden und Minuten anzeigen
+            editBdtButton.setMessage(Text.literal(String.format("Wartezeit: %02dh %02dm", hours, minutes)).formatted(Formatting.RED));
+        }
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
+        updateEditButtonState(); // Stelle sicher, dass der Button-Status gerendert wird
 
         if (!statusText.getString().isEmpty()) {
             int feedbackY = this.height - 50;
-            if(closeButton != null) {
+            if (closeButton != null) {
                 feedbackY = Math.min(feedbackY, closeButton.getY() - this.textRenderer.fontHeight - 5);
             }
             context.drawCenteredTextWithShadow(this.textRenderer, statusText, this.width / 2, feedbackY, 0xFFFFFF);
@@ -316,8 +361,13 @@ public class BlockOfTheDayScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() { return false; }
+    public boolean shouldPause() {
+        return false;
+    }
 
     @Override
-    public void close() { if (this.client != null) this.client.setScreen(null); else super.close(); }
+    public void close() {
+        if (this.client != null) this.client.setScreen(null);
+        else super.close();
+    }
 }

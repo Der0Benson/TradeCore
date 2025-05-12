@@ -22,6 +22,7 @@ public class CreateBdtScreen extends Screen {
     private Text feedbackText = null;
     private long feedbackTimeout = 0;
     private final Screen parentScreen;
+    private boolean confirming = false; // Neuer Status für Bestätigung
 
     protected CreateBdtScreen(Screen parent) {
         super(Text.literal("Neuen Block des Tages erstellen"));
@@ -52,7 +53,13 @@ public class CreateBdtScreen extends Screen {
         this.addDrawableChild(gewinnField);
 
         // Submit Button
-        submitButton = ButtonWidget.builder(Text.literal("BdT Erstellen"), button -> createBdtEntry())
+        submitButton = ButtonWidget.builder(Text.literal("BdT Erstellen"), button -> {
+                    if (confirming) {
+                        createBdtEntry(); // Wenn bereits bestätigt, erstelle
+                    } else {
+                        startConfirmation(); // Starte die Bestätigung
+                    }
+                })
                 .dimensions(centerX - 100, topY + 2 * spacingY + 15, 98, 20)
                 .build();
         this.addDrawableChild(submitButton);
@@ -65,40 +72,45 @@ public class CreateBdtScreen extends Screen {
         this.setInitialFocus(itemDisplayNameField); // Fokus auf das erste Feld
     }
 
-    private void createBdtEntry() {
-        if (this.client == null || this.client.player == null || TradeCore.apiClient == null) return;
+    private void startConfirmation() {
+        if (this.client == null) return;
 
-        String itemDisplayName = itemDisplayNameField.getText().trim(); // Lese Anzeigenamen
+        String itemDisplayName = itemDisplayNameField.getText().trim();
         String gewinnText = gewinnField.getText().trim();
 
-        // Validierung
+        // Validierung (wie zuvor)
         if (itemDisplayName.isEmpty()) {
             setFeedback(Text.literal("Bitte einen Item-Namen eingeben.").formatted(Formatting.RED), 3000);
             return;
         }
-        // Keine ID-Format-Validierung mehr nötig
-        /*
-        if (Identifier.tryParse(itemName) == null) {
-             setFeedback(Text.literal("Ungültiges Item-ID Format...").formatted(Formatting.RED), 4000);
-             return;
-        }
-        */
 
         if (gewinnText.isEmpty()) {
             setFeedback(Text.literal("Bitte eine Gewinn-Beschreibung eingeben.").formatted(Formatting.RED), 3000);
             return;
         }
 
+        this.confirming = true;
+        submitButton.setMessage(Text.literal("Wirklich erstellen?")); // Button-Text ändern
+        setFeedback(Text.literal("Sicher erstellen: " + itemDisplayName + " / " + gewinnText + "?").formatted(Formatting.YELLOW), 10000);
+    }
+
+    private void createBdtEntry() {
+        if (this.client == null || this.client.player == null || TradeCore.apiClient == null) return;
+
+        String itemDisplayName = itemDisplayNameField.getText().trim(); // Lese Anzeigenamen
+        String gewinnText = gewinnField.getText().trim();
+
         String playerUuid = client.player.getUuidAsString();
 
         submitButton.active = false;
-        submitButton.setMessage(Text.literal("Sende..."));
+        submitButton.setMessage(Text.literal("Sende...")); // Button-Text ändern
         setFeedback(Text.literal("Erstelle BdT Eintrag...").formatted(Formatting.YELLOW), 5000);
 
         // Rufe API mit dem Anzeigenamen auf
         CompletableFuture<Boolean> future = TradeCore.apiClient.createBlockOfTheDayAsync(itemDisplayName, gewinnText, playerUuid);
 
         future.thenAcceptAsync(success -> {
+            submitButton.setMessage(Text.literal("BdT Erstellen")); // Button-Text zurücksetzen
             if (success) {
                 setFeedback(Text.literal("Block des Tages erfolgreich erstellt!").formatted(Formatting.GREEN), 4000);
                 net.minecraft.util.Util.getMainWorkerExecutor().execute(() -> {
@@ -108,9 +120,10 @@ public class CreateBdtScreen extends Screen {
             } else {
                 setFeedback(Text.literal("Fehler. Berechtigung? Bereits da? (Logs!)").formatted(Formatting.RED), 5000);
                 submitButton.active = true;
-                submitButton.setMessage(Text.literal("BdT Erstellen"));
             }
         }, MinecraftClient.getInstance());
+
+        this.confirming = false; // Zurücksetzen nach dem Erstellen
     }
 
     private void setFeedback(Text message, long durationMillis) {
@@ -123,7 +136,6 @@ public class CreateBdtScreen extends Screen {
             this.client.execute(() -> this.client.setScreen(this.parentScreen));
         } else { this.close(); }
     }
-
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
