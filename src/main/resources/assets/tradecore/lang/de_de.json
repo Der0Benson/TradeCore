@@ -2,5 +2,6 @@
   "category.tradecore": "TradeCore",
   "key.tradecore.open_cache_info": "Cache Info",
   "key.tradecore.open_price_submit": "Preis Menü",
-  "key.tradecore.open_bdt": "Block des Tages Menü"
+  "key.tradecore.open_bdt": "Block des Tages Menü",
+  "key.tradecore.open_custom_menu": "Benutzerdefiniertes Menü" // NEU
 }
