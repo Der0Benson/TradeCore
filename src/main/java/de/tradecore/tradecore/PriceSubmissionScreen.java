@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 public class PriceSubmissionScreen extends Screen {
 
     private final ItemStack itemToSubmit;
+    private TextFieldWidget stueckPriceField; // NEU: Feld für Stückpreis
     private TextFieldWidget stackPriceField;
     private TextFieldWidget dkPriceField;
     private ButtonWidget initialSubmitButton;
@@ -27,6 +28,7 @@ public class PriceSubmissionScreen extends Screen {
     private boolean confirming = false;
 
     // Zwischenspeicher
+    private int confirmedStueckPrice; // NEU
     private int confirmedStackPrice;
     private int confirmedDkPrice;
     private String confirmedItemName;
@@ -40,15 +42,27 @@ public class PriceSubmissionScreen extends Screen {
     @Override
     protected void init() {
         if (this.client == null) return;
-        int centerX = this.width / 2; int inputWidth = 100; int inputX = centerX - inputWidth / 2;
-        int topY = this.height / 2 - 30; int spacingY = 30; int buttonY = topY + 2 * spacingY;
+        int centerX = this.width / 2;
+        int inputWidth = 150; // Etwas breiter für mehr Platz oder kleinere Schrift
+        int inputX = centerX - inputWidth / 2;
+        int topY = this.height / 2 - 50; // Etwas höher starten für 3 Felder
+        int spacingY = 25; // Abstand zwischen Feldern
+        int buttonY = topY + 3 * spacingY + 5; // Button-Position unter den drei Feldern
 
-        // Textfelder
-        stackPriceField = new TextFieldWidget(this.textRenderer, inputX, topY, inputWidth, 20, Text.literal("Stackpreis"));
+        // NEU: Textfeld für Stückpreis
+        stueckPriceField = new TextFieldWidget(this.textRenderer, inputX, topY, inputWidth, 20, Text.literal("Stückpreis"));
+        stueckPriceField.setPlaceholder(Text.literal("Stückpreis...").formatted(Formatting.GRAY));
+        stueckPriceField.setTextPredicate(s -> s.matches("[0-9]*")); // Nur Zahlen erlauben
+        this.addDrawableChild(stueckPriceField);
+
+        // Textfeld für Stackpreis
+        stackPriceField = new TextFieldWidget(this.textRenderer, inputX, topY + spacingY, inputWidth, 20, Text.literal("Stackpreis"));
         stackPriceField.setPlaceholder(Text.literal("Stackpreis...").formatted(Formatting.GRAY));
         stackPriceField.setTextPredicate(s -> s.matches("[0-9]*"));
         this.addDrawableChild(stackPriceField);
-        dkPriceField = new TextFieldWidget(this.textRenderer, inputX, topY + spacingY, inputWidth, 20, Text.literal("DK-Preis"));
+
+        // Textfeld für DK-Preis
+        dkPriceField = new TextFieldWidget(this.textRenderer, inputX, topY + 2 * spacingY, inputWidth, 20, Text.literal("DK-Preis"));
         dkPriceField.setPlaceholder(Text.literal("DK-Preis...").formatted(Formatting.GRAY));
         dkPriceField.setTextPredicate(s -> s.matches("[0-9]*"));
         this.addDrawableChild(dkPriceField);
@@ -71,22 +85,64 @@ public class PriceSubmissionScreen extends Screen {
                 .dimensions(centerX - 75, buttonY + 24, 150, 20).build();
         this.addDrawableChild(closeButton);
 
-        this.setInitialFocus(stackPriceField);
+        this.setInitialFocus(stueckPriceField); // Fokus auf das erste Feld (Stückpreis)
         updateConfirmingState();
     }
 
     // Startet Bestätigung
     private void startConfirmation() {
         if (this.client == null || this.client.player == null) return;
-        String stackPriceStr = stackPriceField.getText(); String dkPriceStr = dkPriceField.getText();
-        if (stackPriceStr.isEmpty() || dkPriceStr.isEmpty()) { setFeedback(Text.literal("Bitte beide Preise eingeben.").formatted(Formatting.RED), 3000); return; }
+        String stueckPriceStr = stueckPriceField.getText(); // NEU
+        String stackPriceStr = stackPriceField.getText();
+        String dkPriceStr = dkPriceField.getText();
+
+        // Mindestens ein Preis muss eingegeben werden
+        if (stueckPriceStr.isEmpty() && stackPriceStr.isEmpty() && dkPriceStr.isEmpty()) {
+            setFeedback(Text.literal("Bitte mindestens einen Preis eingeben.").formatted(Formatting.RED), 3000);
+            return;
+        }
+
         try {
-            int stackPrice = Integer.parseInt(stackPriceStr); int dkPrice = Integer.parseInt(dkPriceStr);
-            if (stackPrice < 0 || dkPrice < 0) { setFeedback(Text.literal("Preise nicht negativ.").formatted(Formatting.RED), 3000); return; }
-            this.confirmedStackPrice = stackPrice; this.confirmedDkPrice = dkPrice; this.confirmedItemName = Registries.ITEM.getId(itemToSubmit.getItem()).toString();
-            this.confirming = true; updateConfirmingState();
-            setFeedback(Text.literal("Sende Stack: " + stackPrice + "$, DK: " + dkPrice + "$?").formatted(Formatting.YELLOW), 10000);
-        } catch (NumberFormatException e) { setFeedback(Text.literal("Ungültige Zahl.").formatted(Formatting.RED), 3000); }
+            // Parse Preise, setze auf 0 wenn leer, damit die API es als "nicht angegeben" oder 0 interpretieren kann
+            int stueckPrice = stueckPriceStr.isEmpty() ? 0 : Integer.parseInt(stueckPriceStr); // NEU
+            int stackPrice = stackPriceStr.isEmpty() ? 0 : Integer.parseInt(stackPriceStr);
+            int dkPrice = dkPriceStr.isEmpty() ? 0 : Integer.parseInt(dkPriceStr);
+
+            if (stueckPrice < 0 || stackPrice < 0 || dkPrice < 0) { // NEU: stueckPrice Prüfung
+                setFeedback(Text.literal("Preise dürfen nicht negativ sein.").formatted(Formatting.RED), 3000);
+                return;
+            }
+
+            this.confirmedStueckPrice = stueckPrice; // NEU
+            this.confirmedStackPrice = stackPrice;
+            this.confirmedDkPrice = dkPrice;
+            this.confirmedItemName = Registries.ITEM.getId(itemToSubmit.getItem()).toString();
+            this.confirming = true;
+            updateConfirmingState();
+
+            // Feedbacktext anpassen
+            StringBuilder feedbackBuilder = new StringBuilder("Sende ");
+            boolean hasPrice = false;
+            if (stueckPrice > 0) {
+                feedbackBuilder.append("Stück: ").append(stueckPrice).append("$");
+                hasPrice = true;
+            }
+            if (stackPrice > 0) {
+                if (hasPrice) feedbackBuilder.append(", ");
+                feedbackBuilder.append("Stack: ").append(stackPrice).append("$");
+                hasPrice = true;
+            }
+            if (dkPrice > 0) {
+                if (hasPrice) feedbackBuilder.append(", ");
+                feedbackBuilder.append("DK: ").append(dkPrice).append("$");
+            }
+            feedbackBuilder.append("?");
+
+            setFeedback(Text.literal(feedbackBuilder.toString()).formatted(Formatting.YELLOW), 10000);
+
+        } catch (NumberFormatException e) {
+            setFeedback(Text.literal("Ungültige Zahl eingegeben.").formatted(Formatting.RED), 3000);
+        }
     }
 
     // Führt API Call aus
@@ -95,16 +151,35 @@ public class PriceSubmissionScreen extends Screen {
         confirmButton.active = false; cancelButton.active = false; confirmButton.setMessage(Text.literal("Sende..."));
         setFeedback(Text.literal("Sende Preisvorschlag...").formatted(Formatting.YELLOW), 5000);
         String playerName = client.player.getName().getString(); String playerUuid = client.player.getUuidAsString();
-        CompletableFuture<Boolean> future = TradeCore.apiClient.submitPriceSuggestion(confirmedItemName, confirmedStackPrice, confirmedDkPrice, playerName, playerUuid);
+
+        // NEU: confirmedStueckPrice wird übergeben
+        CompletableFuture<Boolean> future = TradeCore.apiClient.submitPriceSuggestion(
+                confirmedItemName,
+                confirmedStueckPrice,
+                confirmedStackPrice,
+                confirmedDkPrice,
+                playerName,
+                playerUuid
+        );
+
         future.thenAcceptAsync(success -> {
             if (success) {
                 setFeedback(Text.literal("Preis erfolgreich gesendet!").formatted(Formatting.GREEN), 3000);
-                stackPriceField.setText(""); dkPriceField.setText(""); this.confirming = false; updateConfirmingState();
+                stueckPriceField.setText(""); // NEU
+                stackPriceField.setText("");
+                dkPriceField.setText("");
+                this.confirming = false;
+                updateConfirmingState();
             } else {
                 setFeedback(Text.literal("Fehler beim Senden. Evtl. Zeitlimit? (Logs!)").formatted(Formatting.RED), 4000);
-                this.confirming = false; updateConfirmingState();
+                this.confirming = false; // Damit der Benutzer es erneut versuchen kann, ohne den Screen neu öffnen zu müssen
+                updateConfirmingState(); // Buttons wieder korrekt setzen
             }
-            confirmButton.setMessage(Text.literal("Bestätigen"));
+            // Stelle sicher, dass die Buttons im Hauptthread aktualisiert werden
+            client.execute(() -> {
+                confirmButton.setMessage(Text.literal("Bestätigen"));
+                // Die Aktivität wird durch updateConfirmingState() gesteuert
+            });
         }, MinecraftClient.getInstance());
     }
 
@@ -116,11 +191,18 @@ public class PriceSubmissionScreen extends Screen {
     // Aktualisiert Sichtbarkeit der Widgets
     private void updateConfirmingState() {
         boolean fieldsVisible = !confirming;
-        stackPriceField.setVisible(fieldsVisible); dkPriceField.setVisible(fieldsVisible);
-        initialSubmitButton.visible = fieldsVisible; initialSubmitButton.active = fieldsVisible;
-        confirmButton.visible = confirming; confirmButton.active = confirming;
-        cancelButton.visible = confirming; cancelButton.active = confirming;
-        this.setInitialFocus(confirming ? confirmButton : stackPriceField);
+        stueckPriceField.setVisible(fieldsVisible); // NEU
+        stackPriceField.setVisible(fieldsVisible);
+        dkPriceField.setVisible(fieldsVisible);
+        initialSubmitButton.visible = fieldsVisible;
+        initialSubmitButton.active = fieldsVisible; // Stelle sicher, dass der Button aktiv ist, wenn sichtbar
+
+        confirmButton.visible = confirming;
+        confirmButton.active = confirming; // Stelle sicher, dass der Button aktiv ist, wenn sichtbar
+        cancelButton.visible = confirming;
+        cancelButton.active = confirming; // Stelle sicher, dass der Button aktiv ist, wenn sichtbar
+
+        this.setInitialFocus(confirming ? confirmButton : stueckPriceField);
     }
 
     // Setzt Feedback-Text
@@ -131,26 +213,32 @@ public class PriceSubmissionScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
-        int itemX = this.width / 2 - 8; int itemY = this.height / 2 - 80;
-        context.drawItem(itemToSubmit, itemX, itemY); // Item zeichnen
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF); // Titel
+        int itemX = this.width / 2 - 8;
+        int itemY = this.height / 2 - 100; // Etwas höher für mehr Platz für Felder
+        context.drawItem(itemToSubmit, itemX, itemY);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
 
         // Labels nur im Eingabemodus
         if (!confirming) {
-            int labelX = stackPriceField.getX() - 5 - this.textRenderer.getWidth("Stackpreis:");
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Stackpreis:"), labelX, stackPriceField.getY() + 6, 0xFFFFFF);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("DK-Preis:"), labelX, dkPriceField.getY() + 6, 0xFFFFFF);
+            // Labels links neben den Textfeldern positionieren
+            int labelXOffset = 5; // Abstand des Labels vom Textfeld
+            int stueckLabelX = stueckPriceField.getX() - this.textRenderer.getWidth("Stückpreis:") - labelXOffset;
+            context.drawTextWithShadow(this.textRenderer, Text.literal("Stückpreis:"), stueckLabelX, stueckPriceField.getY() + 6, 0xFFFFFF);
+
+            int stackLabelX = stackPriceField.getX() - this.textRenderer.getWidth("Stackpreis:") - labelXOffset;
+            context.drawTextWithShadow(this.textRenderer, Text.literal("Stackpreis:"), stackLabelX, stackPriceField.getY() + 6, 0xFFFFFF);
+
+            int dkLabelX = dkPriceField.getX() - this.textRenderer.getWidth("DK-Preis:") - labelXOffset;
+            context.drawTextWithShadow(this.textRenderer, Text.literal("DK-Preis:"), dkLabelX, dkPriceField.getY() + 6, 0xFFFFFF);
         }
 
-        super.render(context, mouseX, mouseY, delta); // Alle sichtbaren Widgets rendern
+        super.render(context, mouseX, mouseY, delta);
 
-        // Feedback oder Hinweis unten zeichnen
         Text bottomText = null;
         if (feedbackText != null && System.currentTimeMillis() < feedbackTimeout) {
-            bottomText = feedbackText; // Aktives Feedback
+            bottomText = feedbackText;
         } else {
             feedbackText = null;
-            // Hinweis auf implizite Zustimmung (wenn kein anderes Feedback aktiv)
             bottomText = Text.literal("Hinweis: Absenden nutzt UUID zur Spam-Verhinderung.")
                     .formatted(Formatting.DARK_GRAY, Formatting.ITALIC);
         }

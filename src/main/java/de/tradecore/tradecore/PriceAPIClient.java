@@ -42,6 +42,7 @@ public class PriceAPIClient {
     private static final String API_CREATE_BDT_URL = "https://mc-tradecore.de/API/create_bdt.php";
     private static final String API_SUBMIT_BDT_VOTE_URL = "https://mc-tradecore.de/API/submit_bdt_vote.php";
     private static final String API_UPDATE_BDT_URL = "https://mc-tradecore.de/API/update_bdt.php";
+    private static final String API_CLAIM_DISCORD_URL = "https://mc-tradecore.de/API/UUIDsubmit.php";
 
     private static final Path PRICE_FILE_PATH = FabricLoader.getInstance().getConfigDir().resolve(TradeCore.MOD_ID + "_prices.json");
     private static final Path PRICE_FILE_TMP_PATH = FabricLoader.getInstance().getConfigDir().resolve(TradeCore.MOD_ID + "_prices.tmp");
@@ -73,9 +74,11 @@ public class PriceAPIClient {
         if (Files.exists(PRICE_FILE_PATH)) {
             try (BufferedReader reader = Files.newBufferedReader(PRICE_FILE_PATH)) {
                 Type priceMapType = new TypeToken<Map<String, PriceResult>>() {}.getType();
-                Map<String, PriceResult> loadedPrices = GSON.fromJson(reader, priceMapType);
+                Map<String, PriceResult> loadedPrices = GSON.fromJson(reader, priceMapType); // Gson kümmert sich um die Felder
                 if (loadedPrices != null) {
                     priceData.clear();
+                    // Wenn 'stueckpreis' in der JSON-Datei fehlt, initialisiert Gson es mit 0 für int.
+                    // Das ist das gewünschte Verhalten.
                     priceData.putAll(loadedPrices);
                     try {
                         FileTime lastModifiedTime = Files.getLastModifiedTime(PRICE_FILE_PATH);
@@ -88,14 +91,14 @@ public class PriceAPIClient {
                     TradeCore.LOGGER.warn("Preisdatei leer/ungültig.");
                     lastUpdateTimestamp.set(0);
                 }
-            } catch (IOException e) {
+            } catch (IOException | JsonSyntaxException e) {
                 TradeCore.LOGGER.error("Fehler beim Laden der Preisdatei: ", e);
                 priceData.clear();
                 lastUpdateTimestamp.set(0);
                 try {
                     Files.deleteIfExists(PRICE_FILE_PATH);
                 } catch (IOException ex) {
-                    // Handle or log exception if needed
+                    TradeCore.LOGGER.error("Konnte korrupte Preisdatei nicht löschen: ", ex);
                 }
             }
         } else {
@@ -116,7 +119,7 @@ public class PriceAPIClient {
             try {
                 Files.deleteIfExists(PRICE_FILE_TMP_PATH);
             } catch (IOException ex) {
-                // Handle or log exception if needed
+                TradeCore.LOGGER.error("Konnte temporäre Preisdatei nicht löschen: ", ex);
             }
         }
     }
@@ -146,11 +149,15 @@ public class PriceAPIClient {
                         if (jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean() && jsonResponse.has("prices")) {
                             JsonObject pricesJson = jsonResponse.getAsJsonObject("prices");
                             Map<String, PriceResult> fetchedPrices = new ConcurrentHashMap<>();
-                            Type priceResultType = new TypeToken<PriceResult>() {}.getType();
+                            Type priceResultType = new TypeToken<PriceResult>() {}.getType(); // Typ bleibt PriceResult
                             for (Map.Entry<String, JsonElement> entry : pricesJson.entrySet()) {
                                 try {
-                                    PriceResult priceResult = GSON.fromJson(entry.getValue(), priceResultType);
-                                    if (priceResult != null) fetchedPrices.put(entry.getKey(), priceResult);
+                                    JsonObject itemPriceJson = entry.getValue().getAsJsonObject();
+                                    int stackpreis = itemPriceJson.has("stackpreis") ? itemPriceJson.get("stackpreis").getAsInt() : 0;
+                                    int dkpreis = itemPriceJson.has("dkpreis") ? itemPriceJson.get("dkpreis").getAsInt() : 0;
+                                    int stueckpreis = itemPriceJson.has("stueckpreis") ? itemPriceJson.get("stueckpreis").getAsInt() : 0;
+
+                                    fetchedPrices.put(entry.getKey(), new PriceResult(stackpreis, dkpreis, stueckpreis));
                                 } catch (Exception e) {
                                     TradeCore.LOGGER.warn("Parse Fehler für Item '{}': {}", entry.getKey(), e.getMessage());
                                 }
@@ -187,7 +194,8 @@ public class PriceAPIClient {
         }
     }
 
-    public CompletableFuture<Boolean> submitPriceSuggestion(String itemName, int stackPrice, int dkPrice, String playerName, String playerUuid) {
+    // ANPASSUNG: Methode `submitPriceSuggestion` um `stueckPreis` erweitert
+    public CompletableFuture<Boolean> submitPriceSuggestion(String itemName, int stueckPreis, int stackPrice, int dkPrice, String playerName, String playerUuid) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         if (executor.isShutdown() || executor.isTerminated()) {
             TradeCore.LOGGER.warn("submitPriceSuggestion: Executor heruntergefahren.");
@@ -201,9 +209,10 @@ public class PriceAPIClient {
                     return;
                 }
                 try {
-                    TradeCore.LOGGER.info("Sende Preisvorschlag: {} von {}", itemName, playerName);
+                    TradeCore.LOGGER.info("Sende Preisvorschlag: {} von {} (Stück: {}, Stack: {}, DK: {})", itemName, playerName, stueckPreis, stackPrice, dkPrice);
                     JsonObject payload = new JsonObject();
                     payload.addProperty("itemName", itemName);
+                    payload.addProperty("stueckPreis", stueckPreis); // NEU: stueckPreis im Payload
                     payload.addProperty("stackPrice", stackPrice);
                     payload.addProperty("dkPrice", dkPrice);
                     payload.addProperty("playerName", playerName);
@@ -265,6 +274,65 @@ public class PriceAPIClient {
         return future;
     }
 
+    public ClaimResult submitClaimRequest(String playerUuid, String minecraftName, String discordId) {
+        if (Thread.currentThread().isInterrupted()) {
+            return new ClaimResult(false, "Interner Thread wurde unterbrochen.");
+        }
+        try {
+            TradeCore.LOGGER.info("Sende Claim-Anfrage für UUID: {}, Name: {}, Discord ID: {}", playerUuid, minecraftName, discordId);
+            JsonObject payload = new JsonObject();
+            payload.addProperty("playerUuid", playerUuid);
+            payload.addProperty("minecraftName", minecraftName);
+            payload.addProperty("discordId", discordId);
+
+            String jsonBody = GSON.toJson(payload);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(API_CLAIM_DISCORD_URL))
+                    .header("Content-Type", "application/json")
+                    .header(CUSTOM_HEADER_NAME, CUSTOM_HEADER_VALUE)
+                    .POST(BodyPublishers.ofString(jsonBody))
+                    .timeout(Duration.ofSeconds(15))
+                    .build();
+
+            HttpResponse<String> response = this.client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                if (responseBody == null || responseBody.trim().isEmpty() || responseBody.trim().equalsIgnoreCase("null")) {
+                    TradeCore.LOGGER.error("Claim Error: API response empty/null.");
+                    return new ClaimResult(false, "Leere oder ungültige Antwort vom Server.");
+                }
+                try {
+                    JsonElement jsonElement = JsonParser.parseString(responseBody);
+                    if (jsonElement != null && jsonElement.isJsonObject()) {
+                        JsonObject jsonResponse = jsonElement.getAsJsonObject();
+                        boolean success = jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean();
+                        String message = jsonResponse.has("message") ? jsonResponse.get("message").getAsString() : (success ? "Erfolgreich" : "Unbekannter Fehler");
+                        return new ClaimResult(success, message);
+                    } else {
+                        TradeCore.LOGGER.error("Claim Error: Invalid JSON object received: {}", responseBody);
+                        return new ClaimResult(false, "Ungültiges JSON-Format vom Server.");
+                    }
+                } catch (JsonSyntaxException jsonEx) {
+                    TradeCore.LOGGER.error("Claim Error: Invalid JSON syntax: {}", responseBody, jsonEx);
+                    return new ClaimResult(false, "Ungültige JSON-Syntax vom Server.");
+                }
+            } else {
+                TradeCore.LOGGER.error("Claim Error: HTTP Status {}. Body: {}", response.statusCode(), response.body());
+                return new ClaimResult(false, "Serverfehler: HTTP " + response.statusCode());
+            }
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+                return new ClaimResult(false, "Anfrage unterbrochen.");
+            }
+            TradeCore.LOGGER.error("Claim Error (Network/Exception): ", e);
+            return new ClaimResult(false, "Netzwerk- oder interner Fehler: " + e.getMessage());
+        }
+    }
+
+
     public PriceResult getItemPrices(String itemName) {
         return priceData.get(itemName);
     }
@@ -296,15 +364,37 @@ public class PriceAPIClient {
     public static class PriceResult {
         public final int stackpreis;
         public final int dkpreis;
+        // WICHTIG: Hier muss der Name des Feldes exakt so sein, wie er in der JSON von der API kommt
+        // und wie Gson ihn beim Deserialisieren erwartet. Wenn du in der fetchAllPricesAsync Methode
+        // direkt auf itemPriceJson.get("stueckpreis") zugreifst, ist der Feldname hier weniger kritisch
+        // für die Deserialisierung von fetchAllPricesAsync, aber wichtig für die Typsicherheit
+        // und wenn du direkt ein PriceResult Objekt mit GSON serialisierst/deserialisierst (z.B. loadPricesFromDisk).
+        // Nennen wir es konsistent `stueckpreis`.
+        public final int stueckpreis; // Name des Feldes für Gson und interne Verwendung
 
-        public PriceResult(int stackpreis, int dkpreis) {
+        // Dieser Platzhalter ist nicht mehr nötig, wenn das Feld `stueckpreis` heißt.
+        // public final int stueckpreis_FIELD_NEU_BITTE_ANPASSEN_FALLS_NOETIG_IN_PriceResult = 0;
+
+
+        public PriceResult(int stackpreis, int dkpreis, int stueckpreis) {
             this.stackpreis = stackpreis;
             this.dkpreis = dkpreis;
+            this.stueckpreis = stueckpreis;
+        }
+    }
+
+    public static class ClaimResult {
+        public final boolean success;
+        public final String message;
+
+        public ClaimResult(boolean success, String message) {
+            this.success = success;
+            this.message = message;
         }
     }
 
     public void shutdown() {
-        TradeCore.LOGGER.info("PriceAPIClient shutdown() aufgerufen (Executor wird nicht mehr explizit gestoppt, da Daemon).");
+        TradeCore.LOGGER.info("PriceAPIClient shutdown() aufgerufen.");
     }
 
     public static class BlockOfTheDayResult {
@@ -365,7 +455,7 @@ public class PriceAPIClient {
         if (mcClient != null && mcClient.player != null) {
             playerUuid = mcClient.player.getUuidAsString();
         } else {
-            TradeCore.LOGGER.warn("Konnte Player UUID für BdT-Abruf nicht ermitteln.");
+            TradeCore.LOGGER.warn("Konnte Player UUID für BdT-Abruf nicht ermitteln (Client nicht verfügbar).");
         }
         final String finalPlayerUuid = playerUuid;
 
@@ -387,7 +477,7 @@ public class PriceAPIClient {
 
                     HttpResponse<String> response = this.client.send(request, HttpResponse.BodyHandlers.ofString());
                     BlockOfTheDayResult result;
-                    LocalDate today = LocalDate.now();
+                    LocalDate todayResponse = LocalDate.now();
 
                     if (response.statusCode() == 200) {
                         String responseBody = response.body();
@@ -433,8 +523,10 @@ public class PriceAPIClient {
                         result = new BlockOfTheDayResult("Fehler: Server nicht erreichbar (HTTP " + response.statusCode() + ")");
                     }
 
-                    this.cachedBdtResult = result;
-                    this.bdtCacheDate = today;
+                    if (result.found || (result.message != null && !result.message.startsWith("Fehler:"))) {
+                        this.cachedBdtResult = result;
+                        this.bdtCacheDate = todayResponse;
+                    }
                     future.complete(result);
                 } catch (Exception e) {
                     if (!(e instanceof InterruptedException)) {

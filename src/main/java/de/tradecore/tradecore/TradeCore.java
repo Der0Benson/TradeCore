@@ -1,9 +1,8 @@
 package de.tradecore.tradecore;
 
 import net.fabricmc.api.ModInitializer;
-// import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents; // Nicht mehr benötigt
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback; // NEU: Import für Command-Registrierung
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-// import net.minecraft.client.MinecraftClient; // Nicht mehr benötigt
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +22,7 @@ public class TradeCore implements ModInitializer {
         TradeCoreConfig.loadConfig();
 
         // Initialisiere API-Client direkt
+        // WICHTIG: Muss vor der Command-Registrierung erfolgen, falls der Command den apiClient benötigt
         apiClient = new PriceAPIClient();
 
         // Lade vorhandene Preise aus lokaler Datei
@@ -34,6 +34,12 @@ public class TradeCore implements ModInitializer {
 
         // Registriere Shutdown-Hooks direkt
         registerShutdownHooks();
+
+        // NEU: Registriere den ClaimCommand
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            ClaimCommand.register(dispatcher); // Ruft die register-Methode in deiner ClaimCommand-Klasse auf
+            LOGGER.info("TradeCore Befehle registriert.");
+        });
 
         LOGGER.info("TradeCore Initialisierung abgeschlossen.");
         // Kein proceedWithInitialization mehr nötig
