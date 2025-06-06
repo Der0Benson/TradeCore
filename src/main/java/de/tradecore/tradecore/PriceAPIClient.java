@@ -43,6 +43,7 @@ public class PriceAPIClient {
     private static final String API_SUBMIT_BDT_VOTE_URL = "https://mc-tradecore.de/API/submit_bdt_vote.php";
     private static final String API_UPDATE_BDT_URL = "https://mc-tradecore.de/API/update_bdt.php";
     private static final String API_CLAIM_DISCORD_URL = "https://mc-tradecore.de/API/UUIDsubmit.php";
+    private static final String API_GET_USER_LEVEL_URL = "https://mc-tradecore.de/API/get_user_level.php"; // NEU
 
     private static final Path PRICE_FILE_PATH = FabricLoader.getInstance().getConfigDir().resolve(TradeCore.MOD_ID + "_prices.json");
     private static final Path PRICE_FILE_TMP_PATH = FabricLoader.getInstance().getConfigDir().resolve(TradeCore.MOD_ID + "_prices.tmp");
@@ -194,7 +195,6 @@ public class PriceAPIClient {
         }
     }
 
-    // ANPASSUNG: Methode `submitPriceSuggestion` um `stueckPreis` erweitert
     public CompletableFuture<Boolean> submitPriceSuggestion(String itemName, int stueckPreis, int stackPrice, int dkPrice, String playerName, String playerUuid) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         if (executor.isShutdown() || executor.isTerminated()) {
@@ -212,7 +212,7 @@ public class PriceAPIClient {
                     TradeCore.LOGGER.info("Sende Preisvorschlag: {} von {} (Stück: {}, Stack: {}, DK: {})", itemName, playerName, stueckPreis, stackPrice, dkPrice);
                     JsonObject payload = new JsonObject();
                     payload.addProperty("itemName", itemName);
-                    payload.addProperty("stueckPreis", stueckPreis); // NEU: stueckPreis im Payload
+                    payload.addProperty("stueckPreis", stueckPreis);
                     payload.addProperty("stackPrice", stackPrice);
                     payload.addProperty("dkPrice", dkPrice);
                     payload.addProperty("playerName", playerName);
@@ -364,17 +364,7 @@ public class PriceAPIClient {
     public static class PriceResult {
         public final int stackpreis;
         public final int dkpreis;
-        // WICHTIG: Hier muss der Name des Feldes exakt so sein, wie er in der JSON von der API kommt
-        // und wie Gson ihn beim Deserialisieren erwartet. Wenn du in der fetchAllPricesAsync Methode
-        // direkt auf itemPriceJson.get("stueckpreis") zugreifst, ist der Feldname hier weniger kritisch
-        // für die Deserialisierung von fetchAllPricesAsync, aber wichtig für die Typsicherheit
-        // und wenn du direkt ein PriceResult Objekt mit GSON serialisierst/deserialisierst (z.B. loadPricesFromDisk).
-        // Nennen wir es konsistent `stueckpreis`.
-        public final int stueckpreis; // Name des Feldes für Gson und interne Verwendung
-
-        // Dieser Platzhalter ist nicht mehr nötig, wenn das Feld `stueckpreis` heißt.
-        // public final int stueckpreis_FIELD_NEU_BITTE_ANPASSEN_FALLS_NOETIG_IN_PriceResult = 0;
-
+        public final int stueckpreis;
 
         public PriceResult(int stackpreis, int dkpreis, int stueckpreis) {
             this.stackpreis = stackpreis;
@@ -817,5 +807,121 @@ public class PriceAPIClient {
             this.success = success;
             this.message = message;
         }
+    }
+
+    // NEU: Innere Klasse für User Level Daten
+    public static class UserLevelResult {
+        public final boolean success;
+        public final String message;
+        public final int level;
+        public final int currentXp;
+        public final int xpForNextLevel;
+        public final String playerName; // Optional, falls die API den Namen zurückgibt
+
+        // Konstruktor für Erfolgsfall
+        public UserLevelResult(boolean success, String playerName, int level, int currentXp, int xpForNextLevel) {
+            this.success = success;
+            this.message = null;
+            this.playerName = playerName;
+            this.level = level;
+            this.currentXp = currentXp;
+            this.xpForNextLevel = xpForNextLevel;
+        }
+
+        // Konstruktor für Fehlerfall
+        public UserLevelResult(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+            this.playerName = null;
+            this.level = 0;
+            this.currentXp = 0;
+            this.xpForNextLevel = 0;
+        }
+    }
+
+    // NEU: Methode zum Abrufen der User Level Daten
+    public CompletableFuture<UserLevelResult> fetchUserLevelAsync(String playerUuid) {
+        CompletableFuture<UserLevelResult> future = new CompletableFuture<>();
+        if (executor.isShutdown() || executor.isTerminated()) {
+            TradeCore.LOGGER.warn("fetchUserLevelAsync: Executor heruntergefahren.");
+            future.complete(new UserLevelResult(false, "Fehler: Client heruntergefahren"));
+            return future;
+        }
+        if (playerUuid == null || playerUuid.trim().isEmpty()) {
+            TradeCore.LOGGER.error("fetchUserLevelAsync: playerUuid ist null oder leer.");
+            future.complete(new UserLevelResult(false, "Fehler: Ungültige Spieler-ID"));
+            return future;
+        }
+
+        try {
+            executor.submit(() -> {
+                if (Thread.currentThread().isInterrupted()) {
+                    future.complete(new UserLevelResult(false, "Fehler: Thread unterbrochen"));
+                    return;
+                }
+                TradeCore.LOGGER.info("Rufe User Level für UUID {} von {} ab...", playerUuid, API_GET_USER_LEVEL_URL);
+                try {
+                    String urlWithParams = API_GET_USER_LEVEL_URL + "?playerUuid=" + playerUuid;
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create(urlWithParams))
+                            .header(CUSTOM_HEADER_NAME, CUSTOM_HEADER_VALUE) // Wichtig für deine API
+                            .GET()
+                            .timeout(Duration.ofSeconds(10))
+                            .build();
+
+                    HttpResponse<String> response = this.client.send(request, HttpResponse.BodyHandlers.ofString());
+                    UserLevelResult result;
+
+                    if (response.statusCode() == 200) {
+                        String responseBody = response.body();
+                        if (responseBody == null || responseBody.trim().isEmpty() || responseBody.trim().equalsIgnoreCase("null")) {
+                            result = new UserLevelResult(false, "Fehler: Leere Server-Antwort für Leveldaten");
+                        } else {
+                            try {
+                                JsonElement jsonElement = JsonParser.parseString(responseBody);
+                                if (jsonElement.isJsonObject()) {
+                                    JsonObject jsonResponse = jsonElement.getAsJsonObject();
+                                    boolean success = jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean();
+                                    if (success) {
+                                        String playerName = jsonResponse.has("playerName") ? jsonResponse.get("playerName").getAsString() : "Unbekannt";
+                                        int level = jsonResponse.has("level") ? jsonResponse.get("level").getAsInt() : 0;
+                                        int currentXp = jsonResponse.has("currentXp") ? jsonResponse.get("currentXp").getAsInt() : 0;
+                                        int xpForNextLevel = jsonResponse.has("xpForNextLevel") ? jsonResponse.get("xpForNextLevel").getAsInt() : 100; // Default, falls nicht vorhanden
+
+                                        result = new UserLevelResult(true, playerName, level, currentXp, xpForNextLevel);
+                                        TradeCore.LOGGER.info("User Level Daten erfolgreich für {} (Level {}) erhalten.", playerName, level);
+                                    } else {
+                                        String message = jsonResponse.has("message") ? jsonResponse.get("message").getAsString() : "Spieler nicht gefunden oder keine Leveldaten vorhanden.";
+                                        result = new UserLevelResult(false, message);
+                                        TradeCore.LOGGER.info("Keine User Level Daten: {}", message);
+                                    }
+                                } else {
+                                    TradeCore.LOGGER.error("Fehler beim Parsen der User Level JSON: Kein JSON Objekt. Body: {}", responseBody);
+                                    result = new UserLevelResult(false, "Fehler: Ungültiges JSON-Format vom Server");
+                                }
+                            } catch (JsonSyntaxException | IllegalStateException | ClassCastException jsonEx) {
+                                TradeCore.LOGGER.error("Fehler beim Parsen der User Level JSON: {}", responseBody, jsonEx);
+                                result = new UserLevelResult(false, "Fehler: Ungültige Server-Antwort (Leveldaten)");
+                            }
+                        }
+                    } else {
+                        TradeCore.LOGGER.error("Fehler beim Abrufen der User Level Daten: HTTP Status {}", response.statusCode());
+                        result = new UserLevelResult(false, "Fehler: Server nicht erreichbar (HTTP " + response.statusCode() + ")");
+                    }
+                    future.complete(result);
+                } catch (Exception e) {
+                    if (!(e instanceof InterruptedException)) {
+                        TradeCore.LOGGER.error("Fehler beim Abrufen der User Level Daten: ", e);
+                    } else {
+                        Thread.currentThread().interrupt();
+                    }
+                    future.complete(new UserLevelResult(false, "Fehler: Netzwerkproblem beim Abrufen der Leveldaten"));
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            TradeCore.LOGGER.error("Executor is shut down, cannot execute fetchUserLevelAsync", e);
+            future.complete(new UserLevelResult(false, "Fehler: Client (Leveldaten) heruntergefahren"));
+        }
+        return future;
     }
 }

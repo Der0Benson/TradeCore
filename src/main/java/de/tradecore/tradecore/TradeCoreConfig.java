@@ -12,23 +12,25 @@ public class TradeCoreConfig {
     private static final String SHOW_ON_SHIFT_KEY = "showPricesOnlyOnShift";
     private static final String LAST_FETCH_TIMESTAMP_KEY = "lastManualFetchTimestamp";
     private static final String MOD_ENABLED_KEY = "modEnabled";
-    // NEU: Key für den Zeitstempel der letzten Statusänderung (nicht in der Datei gespeichert, nur zur Laufzeit)
-    public static long lastModStatusChangeTime = 0L;
-    public static final long BANNER_DISPLAY_DURATION_MS = 3000; // 3 Sekunden
+    private static final String TUTORIAL_SHOWN_KEY = "tutorialShown";
 
     public static boolean showPricesOnlyOnShift = false;
     public static long lastManualFetchTimestamp = 0L;
     public static boolean modEnabled = true;
+    public static boolean tutorialShown = false;
 
     public static void loadConfig() {
         Properties props = new Properties();
         boolean showOnShiftDefault = false;
         long lastFetchDefault = 0L;
         boolean modEnabledDefault = true;
+        boolean tutorialShownDefault = false;
 
+        // Setze Standardwerte vor dem Laden
         showPricesOnlyOnShift = showOnShiftDefault;
         lastManualFetchTimestamp = lastFetchDefault;
         modEnabled = modEnabledDefault;
+        tutorialShown = tutorialShownDefault;
 
         if (Files.exists(CONFIG_PATH)) {
             try (var inputStream = Files.newInputStream(CONFIG_PATH)) {
@@ -41,24 +43,29 @@ public class TradeCoreConfig {
                     lastManualFetchTimestamp = lastFetchDefault;
                 }
                 modEnabled = Boolean.parseBoolean(props.getProperty(MOD_ENABLED_KEY, String.valueOf(modEnabledDefault)));
-                TradeCore.LOGGER.info("Konfiguration geladen: shift={}, lastFetch={}, modEnabled={}", showPricesOnlyOnShift, lastManualFetchTimestamp, modEnabled);
+                tutorialShown = Boolean.parseBoolean(props.getProperty(TUTORIAL_SHOWN_KEY, String.valueOf(tutorialShownDefault)));
+                TradeCore.LOGGER.info("Konfiguration geladen: shift={}, lastFetch={}, modEnabled={}, tutorialShown={}", showPricesOnlyOnShift, lastManualFetchTimestamp, modEnabled, tutorialShown);
             } catch (IOException | IllegalArgumentException e) {
                 TradeCore.LOGGER.error("Fehler beim Laden der Konfig {}, verwende Defaults.", CONFIG_PATH.getFileName(), e);
+                // Rückfall auf Standardwerte, falls Laden fehlschlägt
                 showPricesOnlyOnShift = showOnShiftDefault;
                 lastManualFetchTimestamp = lastFetchDefault;
                 modEnabled = modEnabledDefault;
+                tutorialShown = tutorialShownDefault;
             }
         } else {
             TradeCore.LOGGER.info("Konfig {} nicht gefunden, erstelle Defaults.", CONFIG_PATH.getFileName());
             props.setProperty(SHOW_ON_SHIFT_KEY, String.valueOf(showOnShiftDefault));
             props.setProperty(LAST_FETCH_TIMESTAMP_KEY, String.valueOf(lastFetchDefault));
             props.setProperty(MOD_ENABLED_KEY, String.valueOf(modEnabledDefault));
+            props.setProperty(TUTORIAL_SHOWN_KEY, String.valueOf(tutorialShownDefault));
             saveConfigInternal(props);
         }
     }
 
     public static synchronized void saveConfig() {
         Properties props = new Properties();
+        // Lade bestehende Properties, um andere Einstellungen nicht zu überschreiben, falls vorhanden
         if (Files.exists(CONFIG_PATH)) {
             try (var inputStream = Files.newInputStream(CONFIG_PATH)) {
                 props.load(inputStream);
@@ -69,6 +76,7 @@ public class TradeCoreConfig {
         props.setProperty(SHOW_ON_SHIFT_KEY, String.valueOf(showPricesOnlyOnShift));
         props.setProperty(LAST_FETCH_TIMESTAMP_KEY, String.valueOf(lastManualFetchTimestamp));
         props.setProperty(MOD_ENABLED_KEY, String.valueOf(modEnabled));
+        props.setProperty(TUTORIAL_SHOWN_KEY, String.valueOf(tutorialShown));
         saveConfigInternal(props);
     }
 
@@ -88,8 +96,15 @@ public class TradeCoreConfig {
 
     public static synchronized void toggleModEnabled() {
         modEnabled = !modEnabled;
-        lastModStatusChangeTime = System.currentTimeMillis(); // NEU: Zeitstempel setzen
         saveConfig();
-        TradeCore.LOGGER.info("Mod-Status geändert auf: {}. Zeitstempel: {}", modEnabled ? "Aktiviert" : "Deaktiviert", lastModStatusChangeTime);
+        TradeCore.LOGGER.info("Mod-Status geändert auf: {}", modEnabled ? "Aktiviert" : "Deaktiviert");
+    }
+
+    public static synchronized void markTutorialAsShown() {
+        if (!tutorialShown) {
+            tutorialShown = true;
+            saveConfig();
+            TradeCore.LOGGER.info("Tutorial als angezeigt markiert und Konfiguration gespeichert.");
+        }
     }
 }

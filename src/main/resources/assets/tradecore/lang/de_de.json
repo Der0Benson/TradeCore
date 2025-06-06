@@ -3,5 +3,7 @@
   "key.tradecore.open_cache_info": "Cache Info",
   "key.tradecore.open_price_submit": "Preis Menü",
   "key.tradecore.open_bdt": "Block des Tages Menü",
-  "key.tradecore.open_custom_menu": "Benutzerdefiniertes Menü" // NEU
+  "key.tradecore.open_custom_menu": "Benutzerdefiniertes Menü",
+  "key.tradecore.analyze_chest": "Behälterinhalt analysieren",
+  "key.tradecore.open_level_screen": "Level-Anzeige"
 }
