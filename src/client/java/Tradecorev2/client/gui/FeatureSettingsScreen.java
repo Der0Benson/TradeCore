@@ -70,8 +70,6 @@ public class FeatureSettingsScreen extends Screen {
 
       Component titleText = this.getTitle();
       context.text(this.font, titleText, startX + (PANEL_WIDTH - this.font.width(titleText)) / 2, startY + 10, -1);
-      Component description = Component.literal("Weitere Funktionen können hier ergänzt werden.").withStyle(ChatFormatting.GRAY);
-      context.text(this.font, description, startX + (PANEL_WIDTH - this.font.width(description)) / 2, startY + 32, -1);
 
       super.extractRenderState(context, mouseX, mouseY, delta);
    }
