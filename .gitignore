@@ -1,0 +1,51 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Minecraft Run Directories
+run/
+logs/
+crash-reports/
+
+# Build Outputs
+bin/
+out/
+target/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Sensitive Config Files (API keys, secrets)
+src/main/resources/config.properties
+src/client/java/**/HmacSignatureUtil.java
+
+# Private Components (never publish)
+discord-bot/
+Discord Bot simson.code-workspace
+
+# Local Release Artifacts
+modrinth-upload/
+
+# User-specific Runtime Config
+run/config/tradecorev2.json
+run/tradecorev2/
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*~

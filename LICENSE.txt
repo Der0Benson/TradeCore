@@ -1,0 +1,9 @@
+Copyright (c) 2025-2026 Der0Benson
+All rights reserved.
+
+This source code is made publicly available solely for inspection and
+security/transparency review. No permission is granted to copy, modify,
+distribute, sublicense, sell, deploy, host, or create derivative works from
+this source code or any part of it.
+
+The copyright holder retains all rights not expressly granted in writing.

@@ -1,0 +1,127 @@
+Compiled from "ContainerWidget.java"
+public abstract class net.minecraft.client.gui.widget.ContainerWidget extends net.minecraft.client.gui.widget.ScrollableWidget implements net.minecraft.client.gui.ParentElement {
+  public net.minecraft.client.gui.widget.ContainerWidget(int, int, int, int, net.minecraft.text.Text);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: iload_2
+       3: iload_3
+       4: iload         4
+       6: aload         5
+       8: invokespecial #21                 // Method net/minecraft/client/gui/widget/ScrollableWidget."<init>":(IIIILnet/minecraft/text/Text;)V
+      11: return
+
+  public final boolean isDragging();
+    Code:
+       0: aload_0
+       1: getfield      #29                 // Field dragging:Z
+       4: ireturn
+
+  public final void setDragging(boolean);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: putfield      #29                 // Field dragging:Z
+       5: return
+
+  public net.minecraft.client.gui.Element getFocused();
+    Code:
+       0: aload_0
+       1: getfield      #35                 // Field focusedElement:Lnet/minecraft/client/gui/Element;
+       4: areturn
+
+  public void setFocused(net.minecraft.client.gui.Element);
+    Code:
+       0: aload_0
+       1: getfield      #35                 // Field focusedElement:Lnet/minecraft/client/gui/Element;
+       4: ifnull        17
+       7: aload_0
+       8: getfield      #35                 // Field focusedElement:Lnet/minecraft/client/gui/Element;
+      11: iconst_0
+      12: invokeinterface #42,  2           // InterfaceMethod net/minecraft/client/gui/Element.setFocused:(Z)V
+      17: aload_1
+      18: ifnull        28
+      21: aload_1
+      22: iconst_1
+      23: invokeinterface #42,  2           // InterfaceMethod net/minecraft/client/gui/Element.setFocused:(Z)V
+      28: aload_0
+      29: aload_1
+      30: putfield      #35                 // Field focusedElement:Lnet/minecraft/client/gui/Element;
+      33: return
+
+  public net.minecraft.client.gui.navigation.GuiNavigationPath getNavigationPath(net.minecraft.client.gui.navigation.GuiNavigation);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokespecial #47                 // InterfaceMethod net/minecraft/client/gui/ParentElement.getNavigationPath:(Lnet/minecraft/client/gui/navigation/GuiNavigation;)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+       5: areturn
+
+  public boolean mouseClicked(double, double, int);
+    Code:
+       0: aload_0
+       1: dload_1
+       2: dload_3
+       3: iload         5
+       5: invokevirtual #56                 // Method checkScrollbarDragged:(DDI)Z
+       8: istore        6
+      10: aload_0
+      11: dload_1
+      12: dload_3
+      13: iload         5
+      15: invokespecial #58                 // InterfaceMethod net/minecraft/client/gui/ParentElement.mouseClicked:(DDI)Z
+      18: ifne          26
+      21: iload         6
+      23: ifeq          30
+      26: iconst_1
+      27: goto          31
+      30: iconst_0
+      31: ireturn
+
+  public boolean mouseReleased(double, double, int);
+    Code:
+       0: aload_0
+       1: dload_1
+       2: dload_3
+       3: iload         5
+       5: invokespecial #63                 // Method net/minecraft/client/gui/widget/ScrollableWidget.mouseReleased:(DDI)Z
+       8: pop
+       9: aload_0
+      10: dload_1
+      11: dload_3
+      12: iload         5
+      14: invokespecial #64                 // InterfaceMethod net/minecraft/client/gui/ParentElement.mouseReleased:(DDI)Z
+      17: ireturn
+
+  public boolean mouseDragged(double, double, int, double, double);
+    Code:
+       0: aload_0
+       1: dload_1
+       2: dload_3
+       3: iload         5
+       5: dload         6
+       7: dload         8
+       9: invokespecial #70                 // Method net/minecraft/client/gui/widget/ScrollableWidget.mouseDragged:(DDIDD)Z
+      12: pop
+      13: aload_0
+      14: dload_1
+      15: dload_3
+      16: iload         5
+      18: dload         6
+      20: dload         8
+      22: invokespecial #71                 // InterfaceMethod net/minecraft/client/gui/ParentElement.mouseDragged:(DDIDD)Z
+      25: ireturn
+
+  public boolean isFocused();
+    Code:
+       0: aload_0
+       1: invokespecial #74                 // InterfaceMethod net/minecraft/client/gui/ParentElement.isFocused:()Z
+       4: ireturn
+
+  public void setFocused(boolean);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: invokespecial #75                 // InterfaceMethod net/minecraft/client/gui/ParentElement.setFocused:(Z)V
+       5: return
+}
+

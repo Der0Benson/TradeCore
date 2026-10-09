@@ -1,0 +1,22 @@
+<configuration scan="true">
+    <!-- Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Reduce noisy network / netty / minecraft debug logs -->
+    <logger name="io.netty" level="WARN" />
+    <logger name="net.minecraft.network" level="WARN" />
+    <logger name="net.minecraft.network.handler.EncoderHandler" level="WARN" />
+
+    <!-- Keep mod logs at INFO (or adjust to DEBUG when debugging) -->
+    <logger name="TradecoreV2-BdtPersistenceManager" level="INFO" />
+    <logger name="Tradecorev2" level="INFO" />
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

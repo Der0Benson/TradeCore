@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "tradecorev2",
+  "version": "${version}",
+  "name": "Tradecore",
+  "description": "Community-Mod für den Block des Tages mit Abstimmungen, Vorschlägen und Block-Highlighting.",
+  "authors": [
+    "Der_Benson_ | Juleszlive | Der_Wolfo_"
+  ],
+  "contact": {
+    "homepage": "https://Mc-TradeCore.de",
+    "sources": "https://github.com/Der0Benson/TradeCore",
+    "issues": "https://github.com/Der0Benson/TradeCore/issues"
+  },
+  "license": "All-Rights-Reserved",
+  "icon": "assets/tradecorev2/icon.PNG",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "Tradecorev2.client.Tradecorev2DataGenerator"
+    ],
+    "client": [
+      "Tradecorev2.client.Tradecorev2Client"
+    ]
+  },
+  "mixins": [
+    "tradecorev2.mixins.json",
+    {
+      "config": "tradecorev2.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}",
+    "java": ">=25"
+  }
+}

@@ -1,0 +1,297 @@
+Compiled from "ScrollableWidget.java"
+public abstract class net.minecraft.client.gui.widget.ScrollableWidget extends net.minecraft.client.gui.widget.ClickableWidget {
+  public static final int SCROLLBAR_WIDTH;
+
+  public net.minecraft.client.gui.widget.ScrollableWidget(int, int, int, int, net.minecraft.text.Text);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: iload_2
+       3: iload_3
+       4: iload         4
+       6: aload         5
+       8: invokespecial #29                 // Method net/minecraft/client/gui/widget/ClickableWidget."<init>":(IIIILnet/minecraft/text/Text;)V
+      11: return
+
+  public boolean mouseScrolled(double, double, double, double);
+    Code:
+       0: aload_0
+       1: getfield      #41                 // Field visible:Z
+       4: ifne          9
+       7: iconst_0
+       8: ireturn
+       9: aload_0
+      10: aload_0
+      11: invokevirtual #45                 // Method getScrollY:()D
+      14: dload         7
+      16: aload_0
+      17: invokevirtual #48                 // Method getDeltaYPerScroll:()D
+      20: dmul
+      21: dsub
+      22: invokevirtual #52                 // Method setScrollY:(D)V
+      25: iconst_1
+      26: ireturn
+
+  public boolean mouseDragged(double, double, int, double, double);
+    Code:
+       0: aload_0
+       1: getfield      #59                 // Field scrollbarDragged:Z
+       4: ifeq          97
+       7: dload_3
+       8: aload_0
+       9: invokevirtual #63                 // Method getY:()I
+      12: i2d
+      13: dcmpg
+      14: ifge          25
+      17: aload_0
+      18: dconst_0
+      19: invokevirtual #52                 // Method setScrollY:(D)V
+      22: goto          95
+      25: dload_3
+      26: aload_0
+      27: invokevirtual #66                 // Method getBottom:()I
+      30: i2d
+      31: dcmpl
+      32: ifle          47
+      35: aload_0
+      36: aload_0
+      37: invokevirtual #69                 // Method getMaxScrollY:()I
+      40: i2d
+      41: invokevirtual #52                 // Method setScrollY:(D)V
+      44: goto          95
+      47: iconst_1
+      48: aload_0
+      49: invokevirtual #69                 // Method getMaxScrollY:()I
+      52: invokestatic  #75                 // Method java/lang/Math.max:(II)I
+      55: i2d
+      56: dstore        10
+      58: aload_0
+      59: invokevirtual #78                 // Method getScrollbarThumbHeight:()I
+      62: istore        12
+      64: dconst_1
+      65: dload         10
+      67: aload_0
+      68: getfield      #81                 // Field height:I
+      71: iload         12
+      73: isub
+      74: i2d
+      75: ddiv
+      76: invokestatic  #84                 // Method java/lang/Math.max:(DD)D
+      79: dstore        13
+      81: aload_0
+      82: aload_0
+      83: invokevirtual #45                 // Method getScrollY:()D
+      86: dload         8
+      88: dload         13
+      90: dmul
+      91: dadd
+      92: invokevirtual #52                 // Method setScrollY:(D)V
+      95: iconst_1
+      96: ireturn
+      97: aload_0
+      98: dload_1
+      99: dload_3
+     100: iload         5
+     102: dload         6
+     104: dload         8
+     106: invokespecial #86                 // Method net/minecraft/client/gui/widget/ClickableWidget.mouseDragged:(DDIDD)Z
+     109: ireturn
+
+  public void onRelease(double, double);
+    Code:
+       0: aload_0
+       1: iconst_0
+       2: putfield      #59                 // Field scrollbarDragged:Z
+       5: return
+
+  public double getScrollY();
+    Code:
+       0: aload_0
+       1: getfield      #92                 // Field scrollY:D
+       4: dreturn
+
+  public void setScrollY(double);
+    Code:
+       0: aload_0
+       1: dload_1
+       2: dconst_0
+       3: aload_0
+       4: invokevirtual #69                 // Method getMaxScrollY:()I
+       7: i2d
+       8: invokestatic  #98                 // Method net/minecraft/util/math/MathHelper.clamp:(DDD)D
+      11: putfield      #92                 // Field scrollY:D
+      14: return
+
+  public boolean checkScrollbarDragged(double, double, int);
+    Code:
+       0: aload_0
+       1: aload_0
+       2: invokevirtual #104                // Method overflows:()Z
+       5: ifeq          64
+       8: aload_0
+       9: iload         5
+      11: invokevirtual #108                // Method isValidClickButton:(I)Z
+      14: ifeq          64
+      17: dload_1
+      18: aload_0
+      19: invokevirtual #111                // Method getScrollbarX:()I
+      22: i2d
+      23: dcmpl
+      24: iflt          64
+      27: dload_1
+      28: aload_0
+      29: invokevirtual #111                // Method getScrollbarX:()I
+      32: bipush        6
+      34: iadd
+      35: i2d
+      36: dcmpg
+      37: ifgt          64
+      40: dload_3
+      41: aload_0
+      42: invokevirtual #63                 // Method getY:()I
+      45: i2d
+      46: dcmpl
+      47: iflt          64
+      50: dload_3
+      51: aload_0
+      52: invokevirtual #66                 // Method getBottom:()I
+      55: i2d
+      56: dcmpg
+      57: ifge          64
+      60: iconst_1
+      61: goto          65
+      64: iconst_0
+      65: putfield      #59                 // Field scrollbarDragged:Z
+      68: aload_0
+      69: getfield      #59                 // Field scrollbarDragged:Z
+      72: ireturn
+
+  public void refreshScroll();
+    Code:
+       0: aload_0
+       1: aload_0
+       2: getfield      #92                 // Field scrollY:D
+       5: invokevirtual #52                 // Method setScrollY:(D)V
+       8: return
+
+  public int getMaxScrollY();
+    Code:
+       0: iconst_0
+       1: aload_0
+       2: invokevirtual #116                // Method getContentsHeightWithPadding:()I
+       5: aload_0
+       6: getfield      #81                 // Field height:I
+       9: isub
+      10: invokestatic  #75                 // Method java/lang/Math.max:(II)I
+      13: ireturn
+
+  protected boolean overflows();
+    Code:
+       0: aload_0
+       1: invokevirtual #69                 // Method getMaxScrollY:()I
+       4: ifle          11
+       7: iconst_1
+       8: goto          12
+      11: iconst_0
+      12: ireturn
+
+  protected int getScrollbarThumbHeight();
+    Code:
+       0: aload_0
+       1: getfield      #81                 // Field height:I
+       4: aload_0
+       5: getfield      #81                 // Field height:I
+       8: imul
+       9: i2f
+      10: aload_0
+      11: invokevirtual #116                // Method getContentsHeightWithPadding:()I
+      14: i2f
+      15: fdiv
+      16: f2i
+      17: bipush        32
+      19: aload_0
+      20: getfield      #81                 // Field height:I
+      23: bipush        8
+      25: isub
+      26: invokestatic  #119                // Method net/minecraft/util/math/MathHelper.clamp:(III)I
+      29: ireturn
+
+  protected int getScrollbarX();
+    Code:
+       0: aload_0
+       1: invokevirtual #122                // Method getRight:()I
+       4: bipush        6
+       6: isub
+       7: ireturn
+
+  protected int getScrollbarThumbY();
+    Code:
+       0: aload_0
+       1: invokevirtual #63                 // Method getY:()I
+       4: aload_0
+       5: getfield      #92                 // Field scrollY:D
+       8: d2i
+       9: aload_0
+      10: getfield      #81                 // Field height:I
+      13: aload_0
+      14: invokevirtual #78                 // Method getScrollbarThumbHeight:()I
+      17: isub
+      18: imul
+      19: aload_0
+      20: invokevirtual #69                 // Method getMaxScrollY:()I
+      23: idiv
+      24: aload_0
+      25: invokevirtual #63                 // Method getY:()I
+      28: iadd
+      29: invokestatic  #75                 // Method java/lang/Math.max:(II)I
+      32: ireturn
+
+  protected void drawScrollbar(net.minecraft.client.gui.DrawContext);
+    Code:
+       0: aload_0
+       1: invokevirtual #104                // Method overflows:()Z
+       4: ifeq          64
+       7: aload_0
+       8: invokevirtual #111                // Method getScrollbarX:()I
+      11: istore_2
+      12: aload_0
+      13: invokevirtual #78                 // Method getScrollbarThumbHeight:()I
+      16: istore_3
+      17: aload_0
+      18: invokevirtual #128                // Method getScrollbarThumbY:()I
+      21: istore        4
+      23: aload_1
+      24: invokedynamic #149,  0            // InvokeDynamic #0:apply:()Ljava/util/function/Function;
+      29: getstatic     #151                // Field SCROLLER_BACKGROUND_TEXTURE:Lnet/minecraft/util/Identifier;
+      32: iload_2
+      33: aload_0
+      34: invokevirtual #63                 // Method getY:()I
+      37: bipush        6
+      39: aload_0
+      40: invokevirtual #154                // Method getHeight:()I
+      43: invokevirtual #160                // Method net/minecraft/client/gui/DrawContext.drawGuiTexture:(Ljava/util/function/Function;Lnet/minecraft/util/Identifier;IIII)V
+      46: aload_1
+      47: invokedynamic #149,  0            // InvokeDynamic #0:apply:()Ljava/util/function/Function;
+      52: getstatic     #162                // Field SCROLLER_TEXTURE:Lnet/minecraft/util/Identifier;
+      55: iload_2
+      56: iload         4
+      58: bipush        6
+      60: iload_3
+      61: invokevirtual #160                // Method net/minecraft/client/gui/DrawContext.drawGuiTexture:(Ljava/util/function/Function;Lnet/minecraft/util/Identifier;IIII)V
+      64: return
+
+  protected abstract int getContentsHeightWithPadding();
+
+  protected abstract double getDeltaYPerScroll();
+
+  static {};
+    Code:
+       0: ldc           #166                // String widget/scroller
+       2: invokestatic  #172                // Method net/minecraft/util/Identifier.ofVanilla:(Ljava/lang/String;)Lnet/minecraft/util/Identifier;
+       5: putstatic     #162                // Field SCROLLER_TEXTURE:Lnet/minecraft/util/Identifier;
+       8: ldc           #174                // String widget/scroller_background
+      10: invokestatic  #172                // Method net/minecraft/util/Identifier.ofVanilla:(Ljava/lang/String;)Lnet/minecraft/util/Identifier;
+      13: putstatic     #151                // Field SCROLLER_BACKGROUND_TEXTURE:Lnet/minecraft/util/Identifier;
+      16: return
+}
+

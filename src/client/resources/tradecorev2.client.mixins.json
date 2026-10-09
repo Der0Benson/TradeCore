@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "Tradecorev2.client.mixin.client",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ScreenMixin",
+    "ChatScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  },
+  "refmap": "client-tradecorev2-refmap.json"
+}

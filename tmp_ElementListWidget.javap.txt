@@ -1,0 +1,196 @@
+Compiled from "ElementListWidget.java"
+public abstract class net.minecraft.client.gui.widget.ElementListWidget<E extends net.minecraft.client.gui.widget.ElementListWidget$Entry<E>> extends net.minecraft.client.gui.widget.EntryListWidget<E> {
+  public net.minecraft.client.gui.widget.ElementListWidget(net.minecraft.client.MinecraftClient, int, int, int, int);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iload_2
+       3: iload_3
+       4: iload         4
+       6: iload         5
+       8: invokespecial #37                 // Method net/minecraft/client/gui/widget/EntryListWidget."<init>":(Lnet/minecraft/client/MinecraftClient;IIII)V
+      11: return
+
+  public net.minecraft.client.gui.widget.ElementListWidget(net.minecraft.client.MinecraftClient, int, int, int, int, int);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iload_2
+       3: iload_3
+       4: iload         4
+       6: iload         5
+       8: iload         6
+      10: invokespecial #46                 // Method net/minecraft/client/gui/widget/EntryListWidget."<init>":(Lnet/minecraft/client/MinecraftClient;IIIII)V
+      13: return
+
+  public net.minecraft.client.gui.navigation.GuiNavigationPath getNavigationPath(net.minecraft.client.gui.navigation.GuiNavigation);
+    Code:
+       0: aload_0
+       1: invokevirtual #54                 // Method getEntryCount:()I
+       4: ifne          9
+       7: aconst_null
+       8: areturn
+       9: aload_1
+      10: instanceof    #12                 // class net/minecraft/client/gui/navigation/GuiNavigation$Arrow
+      13: ifeq          203
+      16: aload_1
+      17: checkcast     #12                 // class net/minecraft/client/gui/navigation/GuiNavigation$Arrow
+      20: astore_2
+      21: aload_0
+      22: invokevirtual #58                 // Method getFocused:()Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;
+      25: checkcast     #10                 // class net/minecraft/client/gui/widget/ElementListWidget$Entry
+      28: astore_3
+      29: aload_2
+      30: invokevirtual #62                 // Method net/minecraft/client/gui/navigation/GuiNavigation$Arrow.direction:()Lnet/minecraft/client/gui/navigation/NavigationDirection;
+      33: invokevirtual #68                 // Method net/minecraft/client/gui/navigation/NavigationDirection.getAxis:()Lnet/minecraft/client/gui/navigation/NavigationAxis;
+      36: getstatic     #74                 // Field net/minecraft/client/gui/navigation/NavigationAxis.HORIZONTAL:Lnet/minecraft/client/gui/navigation/NavigationAxis;
+      39: if_acmpne     56
+      42: aload_3
+      43: ifnull        56
+      46: aload_0
+      47: aload_3
+      48: aload_1
+      49: invokevirtual #76                 // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.getNavigationPath:(Lnet/minecraft/client/gui/navigation/GuiNavigation;)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+      52: invokestatic  #82                 // InterfaceMethod net/minecraft/client/gui/navigation/GuiNavigationPath.of:(Lnet/minecraft/client/gui/ParentElement;Lnet/minecraft/client/gui/navigation/GuiNavigationPath;)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+      55: areturn
+      56: iconst_m1
+      57: istore        4
+      59: aload_2
+      60: invokevirtual #62                 // Method net/minecraft/client/gui/navigation/GuiNavigation$Arrow.direction:()Lnet/minecraft/client/gui/navigation/NavigationDirection;
+      63: astore        5
+      65: aload_3
+      66: ifnull        84
+      69: aload_3
+      70: invokevirtual #86                 // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.children:()Ljava/util/List;
+      73: aload_3
+      74: invokevirtual #89                 // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.getFocused:()Lnet/minecraft/client/gui/Element;
+      77: invokeinterface #95,  2           // InterfaceMethod java/util/List.indexOf:(Ljava/lang/Object;)I
+      82: istore        4
+      84: iload         4
+      86: iconst_m1
+      87: if_icmpne     150
+      90: getstatic     #99                 // Field net/minecraft/client/gui/widget/ElementListWidget$1.field_41804:[I
+      93: aload         5
+      95: invokevirtual #102                // Method net/minecraft/client/gui/navigation/NavigationDirection.ordinal:()I
+      98: iaload
+      99: lookupswitch  { // 2
+
+                     1: 124
+
+                     2: 136
+               default: 147
+          }
+     124: ldc           #103                // int 2147483647
+     126: istore        4
+     128: getstatic     #107                // Field net/minecraft/client/gui/navigation/NavigationDirection.DOWN:Lnet/minecraft/client/gui/navigation/NavigationDirection;
+     131: astore        5
+     133: goto          150
+     136: iconst_0
+     137: istore        4
+     139: getstatic     #107                // Field net/minecraft/client/gui/navigation/NavigationDirection.DOWN:Lnet/minecraft/client/gui/navigation/NavigationDirection;
+     142: astore        5
+     144: goto          150
+     147: iconst_0
+     148: istore        4
+     150: aload_3
+     151: astore        6
+     153: aload_0
+     154: aload         5
+     156: invokedynamic #126,  0            // InvokeDynamic #0:test:()Ljava/util/function/Predicate;
+     161: aload         6
+     163: invokevirtual #130                // Method getNeighboringEntry:(Lnet/minecraft/client/gui/navigation/NavigationDirection;Ljava/util/function/Predicate;Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;)Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;
+     166: checkcast     #10                 // class net/minecraft/client/gui/widget/ElementListWidget$Entry
+     169: astore        6
+     171: aload         6
+     173: ifnonnull     178
+     176: aconst_null
+     177: areturn
+     178: aload         6
+     180: aload_2
+     181: iload         4
+     183: invokevirtual #133                // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.getNavigationPath:(Lnet/minecraft/client/gui/navigation/GuiNavigation;I)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+     186: astore        7
+     188: aload         7
+     190: ifnull        200
+     193: aload_0
+     194: aload         7
+     196: invokestatic  #82                 // InterfaceMethod net/minecraft/client/gui/navigation/GuiNavigationPath.of:(Lnet/minecraft/client/gui/ParentElement;Lnet/minecraft/client/gui/navigation/GuiNavigationPath;)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+     199: areturn
+     200: goto          153
+     203: aload_0
+     204: aload_1
+     205: invokespecial #134                // Method net/minecraft/client/gui/widget/EntryListWidget.getNavigationPath:(Lnet/minecraft/client/gui/navigation/GuiNavigation;)Lnet/minecraft/client/gui/navigation/GuiNavigationPath;
+     208: areturn
+
+  public void setFocused(net.minecraft.client.gui.Element);
+    Code:
+       0: aload_0
+       1: invokevirtual #58                 // Method getFocused:()Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;
+       4: aload_1
+       5: if_acmpne     9
+       8: return
+       9: aload_0
+      10: aload_1
+      11: invokespecial #149                // Method net/minecraft/client/gui/widget/EntryListWidget.setFocused:(Lnet/minecraft/client/gui/Element;)V
+      14: aload_1
+      15: ifnonnull     23
+      18: aload_0
+      19: aconst_null
+      20: invokevirtual #153                // Method setSelected:(Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;)V
+      23: return
+
+  public net.minecraft.client.gui.Selectable$SelectionType getType();
+    Code:
+       0: aload_0
+       1: invokevirtual #160                // Method isFocused:()Z
+       4: ifeq          11
+       7: getstatic     #164                // Field net/minecraft/client/gui/Selectable$SelectionType.FOCUSED:Lnet/minecraft/client/gui/Selectable$SelectionType;
+      10: areturn
+      11: aload_0
+      12: invokespecial #166                // Method net/minecraft/client/gui/widget/EntryListWidget.getType:()Lnet/minecraft/client/gui/Selectable$SelectionType;
+      15: areturn
+
+  protected boolean isSelectedEntry(int);
+    Code:
+       0: iconst_0
+       1: ireturn
+
+  public void appendClickableNarrations(net.minecraft.client.gui.screen.narration.NarrationMessageBuilder);
+    Code:
+       0: aload_0
+       1: invokevirtual #175                // Method getHoveredEntry:()Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;
+       4: checkcast     #10                 // class net/minecraft/client/gui/widget/ElementListWidget$Entry
+       7: astore_2
+       8: aload_2
+       9: ifnull        31
+      12: aload_2
+      13: aload_1
+      14: invokeinterface #181,  1          // InterfaceMethod net/minecraft/client/gui/screen/narration/NarrationMessageBuilder.nextMessage:()Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;
+      19: invokevirtual #184                // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.appendNarrations:(Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;)V
+      22: aload_0
+      23: aload_1
+      24: aload_2
+      25: invokevirtual #187                // Method appendNarrations:(Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;)V
+      28: goto          59
+      31: aload_0
+      32: invokevirtual #58                 // Method getFocused:()Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;
+      35: checkcast     #10                 // class net/minecraft/client/gui/widget/ElementListWidget$Entry
+      38: astore_3
+      39: aload_3
+      40: ifnull        59
+      43: aload_3
+      44: aload_1
+      45: invokeinterface #181,  1          // InterfaceMethod net/minecraft/client/gui/screen/narration/NarrationMessageBuilder.nextMessage:()Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;
+      50: invokevirtual #184                // Method net/minecraft/client/gui/widget/ElementListWidget$Entry.appendNarrations:(Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;)V
+      53: aload_0
+      54: aload_1
+      55: aload_3
+      56: invokevirtual #187                // Method appendNarrations:(Lnet/minecraft/client/gui/screen/narration/NarrationMessageBuilder;Lnet/minecraft/client/gui/widget/EntryListWidget$Entry;)V
+      59: aload_1
+      60: getstatic     #193                // Field net/minecraft/client/gui/screen/narration/NarrationPart.USAGE:Lnet/minecraft/client/gui/screen/narration/NarrationPart;
+      63: ldc           #195                // String narration.component_list.usage
+      65: invokestatic  #201                // InterfaceMethod net/minecraft/text/Text.translatable:(Ljava/lang/String;)Lnet/minecraft/text/MutableText;
+      68: invokeinterface #205,  3          // InterfaceMethod net/minecraft/client/gui/screen/narration/NarrationMessageBuilder.put:(Lnet/minecraft/client/gui/screen/narration/NarrationPart;Lnet/minecraft/text/Text;)V
+      73: return
+}
+

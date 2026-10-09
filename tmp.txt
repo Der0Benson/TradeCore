@@ -1,0 +1,253 @@
+﻿package Tradecorev2.client.gui;
+
+import net.minecraft.block.Block;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.registry.Registries;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.function.BiConsumer;
+
+/**
+ * Durchsuchbare Liste aller Bloecke mit Vorschau der Auswahl.
+ */
+public class BlockSelectScreen extends Screen {
+
+    private final Screen parent;
+    private final BiConsumer<String, String> onSelect; // (id, displayName)
+    private static final int ROW_HEIGHT = 20;
+    private static final int ICON_SIZE = 16;
+    private static final int PANEL_MARGIN = 15;
+    private static final int BG_COLOR = 0xD0101010;
+    private static final int BORDER_COLOR = 0xFFFFFFFF;
+    private static final int HOVER_BG = 0x30FFFFFF;
+    private static final int SELECT_BG = 0x40FFFFFF;
+    private static final int PREVIEW_SPACING = 10;
+    private TextFieldWidget searchField;
+    private BlockListWidget listWidget;
+    private ButtonWidget selectButton;
+    private int panelX;
+    private int panelY;
+    private int panelWidth;
+    private int panelHeight;
+    private int previewY;
+
+    @Nullable
+    private BlockListWidget.Entry selectedEntry;
+
+    public BlockSelectScreen(Screen parent, BiConsumer<String, String> onSelect) {
+        super(Text.literal("Block ausw\u00e4hlen"));
+        this.parent = parent;
+        this.onSelect = onSelect;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+        panelWidth = Math.min(this.width - PANEL_MARGIN * 2, 420);
+        panelWidth = Math.max(panelWidth, 280);
+        panelX = (this.width - panelWidth) / 2;
+        panelY = 18;
+        panelHeight = this.height - panelY - 36;
+
+        int searchWidth = panelWidth - 40;
+        int searchX = panelX + (panelWidth - searchWidth) / 2;
+        int searchY = panelY + 18;
+        previewY = searchY + 32;
+
+        searchField = new TextFieldWidget(this.textRenderer, searchX, searchY, searchWidth, 20, Text.literal("Suche Block"));
+        searchField.setChangedListener(s -> refreshList());
+        this.addDrawableChild(searchField);
+        this.setInitialFocus(searchField);
+
+        int listTop = previewY + 44 + PREVIEW_SPACING;
+        // Lass am unteren Rand genug Platz für den Select-Button, damit Klicks nicht von der Liste "geschluckt" werden.
+        int bottomMargin = 70;
+        int listHeight = panelY + panelHeight - listTop - bottomMargin;
+        if (listHeight < 40) {
+            listHeight = 40;
+        }
+        listWidget = new BlockListWidget(this.client, panelWidth, listHeight, listTop, ROW_HEIGHT);
+        listWidget.setX(panelX);
+        this.addDrawableChild(listWidget);
+
+        selectButton = ButtonWidget.builder(Text.literal("Ausw\u00e4hlen"), button -> {
+            if (selectedEntry != null) {
+                onSelect.accept(selectedEntry.blockId, selectedEntry.displayName);
+                // Wenn der Callback bereits einen neuen Screen geöffnet hat, nicht zurück zum Parent springen.
+                if (MinecraftClient.getInstance().currentScreen != this) {
+                    return;
+                }
+                close();
+            }
+        }).dimensions(panelX + (panelWidth - 140) / 2, panelY + panelHeight - 24, 140, 20).build();
+        selectButton.active = false;
+        this.addDrawableChild(selectButton);
+
+        // initial bef\u00fcllen, nachdem alle Widgets existieren
+        populateList("");
+    }
+
+    private void refreshList() {
+        populateList(searchField.getText());
+    }
+
+    private void populateList(String filter) {
+        String needle = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
+        List<BlockListWidget.Entry> entries = new ArrayList<>();
+
+        Registries.BLOCK.stream()
+                .sorted(Comparator.comparing(block -> block.getName().getString()))
+                .forEach(block -> {
+                    Identifier id = Registries.BLOCK.getId(block);
+                    String displayName = block.getName().getString();
+                    String idStr = id.toString();
+                    String displayLower = displayName.toLowerCase(Locale.ROOT);
+                    if (needle.isEmpty() || displayLower.contains(needle)) {
+                        entries.add(listWidget.new Entry(block, idStr, displayName));
+                    }
+                });
+
+        listWidget.replaceEntries(entries);
+        selectedEntry = null;
+        selectButton.active = false;
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context, mouseX, mouseY, delta);
+
+        // Panel-Hintergrund und Rahmen
+        context.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BG_COLOR);
+        context.drawBorder(panelX, panelY, panelWidth, panelHeight, BORDER_COLOR);
+
+        int titleY = panelY + 6;
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, titleY, 0xFFFFFF);
+
+        // Auswahl-Vorschau
+        if (selectedEntry != null) {
+            var stack = selectedEntry.block.asItem().getDefaultStack();
+            int previewCenter = panelX + panelWidth / 2;
+            if (!stack.isEmpty()) {
+                context.drawItem(stack, previewCenter - 8, previewY);
+            }
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(selectedEntry.displayName), previewCenter, previewY + 20, 0xFFFFFF);
+        } else {
+            int previewCenter = panelX + panelWidth / 2;
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Kein Block ausgew\u00e4hlt").formatted(Formatting.GRAY), previewCenter, previewY + 8, 0xFFFFFF);
+        }
+        // feine Trennlinie zwischen Vorschau und Liste
+        context.fill(panelX + 8, previewY + 44, panelX + panelWidth - 8, previewY + 45, 0x50FFFFFF);
+
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (listWidget.mouseClicked(mouseX, mouseY, button)) {
+            BlockListWidget.Entry entry = listWidget.getSelectedOrNull();
+            if (entry != null) {
+                boolean doubleClick = this.selectedEntry == entry && button == 0;
+                selectedEntry = entry;
+                selectButton.active = true;
+                if (doubleClick) {
+                    onSelect.accept(selectedEntry.blockId, selectedEntry.displayName);
+                    // Wenn der Callback einen neuen Screen setzt, hier nicht überschreiben.
+                    if (MinecraftClient.getInstance().currentScreen != this) {
+                        return true;
+                    }
+                    close();
+                }
+            }
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public void close() {
+        MinecraftClient.getInstance().setScreen(parent);
+    }
+
+    static class BlockListWidget extends ElementListWidget<BlockListWidget.Entry> {
+
+        public BlockListWidget(MinecraftClient client, int width, int height, int top, int itemHeight) {
+            super(client, width, height, top, itemHeight);
+        }
+
+        @Override
+        public int getRowWidth() {
+            return this.width - 12;
+        }
+
+        protected int getScrollbarPositionX() {
+            return this.getX() + this.width - 6;
+        }
+        
+        @Nullable
+        public Entry entryAt(double mouseX, double mouseY) {
+            return this.getEntryAtPosition(mouseX, mouseY);
+        }
+
+        class Entry extends ElementListWidget.Entry<Entry> {
+            private final Block block;
+            private final String blockId;
+            private final String displayName;
+
+            Entry(Block block, String blockId, String displayName) {
+                this.block = block;
+                this.blockId = blockId;
+                this.displayName = displayName;
+            }
+
+            @Override
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+                boolean selected = BlockListWidget.this.getSelectedOrNull() == this;
+                int color = selected ? 0xFFFFC000 : hovered ? 0xFFFFA000 : 0xFFFFFFFF;
+                if (hovered || selected) {
+                    int bg = selected ? SELECT_BG : HOVER_BG;
+                    context.fill(x - 2, y, x + entryWidth + 2, y + entryHeight - 2, bg);
+                }
+                var stack = block.asItem().getDefaultStack();
+                int iconY = y + (entryHeight - ICON_SIZE) / 2;
+                int textX = x + ICON_SIZE + 6;
+                int firstLineY = y + 2;
+                if (!stack.isEmpty()) {
+                    context.drawItem(stack, x + 2, iconY);
+                }
+                context.drawText(MinecraftClient.getInstance().textRenderer, displayName, textX, firstLineY, color, false);
+            }
+
+            @Override
+            public boolean mouseClicked(double mouseX, double mouseY, int button) {
+                return true;
+            }
+
+            @Override
+            public List<? extends Element> children() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public List<? extends Selectable> selectableChildren() {
+                return Collections.emptyList();
+            }
+        }
+    }
+}
+
