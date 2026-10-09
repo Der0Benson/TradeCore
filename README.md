@@ -60,15 +60,6 @@ Die Mod verwendet die Tradecore-API für:
 
 Anfragen, die Änderungen auslösen, werden mit HMAC-SHA256 signiert.
 
-## Bauen
-
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot'
-.\gradlew.bat build
-```
-
-Die fertige Mod liegt anschließend unter `build/libs/`.
-
 ## Lizenz
 
 Der Quellcode ist ausschließlich zur Einsicht und zur Sicherheits-/Transparenzprüfung öffentlich. Eine Erlaubnis zum Kopieren, Bearbeiten, Weiterverbreiten, Hosten oder Erstellen abgeleiteter Werke wird nicht erteilt. Siehe [LICENSE.txt](LICENSE.txt).
