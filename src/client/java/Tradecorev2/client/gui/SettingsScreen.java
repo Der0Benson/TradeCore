@@ -52,6 +52,11 @@ public class SettingsScreen extends Screen {
             this.minecraft.gui.setScreen(new HighlightSettingsScreen(this));
          }
       }).bounds(centerX, buttonStartY + spacing * row++, buttonWidth, buttonHeight).build());
+      this.addRenderableWidget(Button.builder(Component.literal("Funktionen"), button -> {
+         if (this.minecraft != null) {
+            this.minecraft.gui.setScreen(new FeatureSettingsScreen(this));
+         }
+      }).bounds(centerX, buttonStartY + spacing * row++, buttonWidth, buttonHeight).build());
       this.addRenderableWidget(Button.builder(Component.literal("Discord beitreten"), button -> DiscordOpener.openDiscordInvite())
          .bounds(centerX, buttonStartY + spacing * row++, buttonWidth, buttonHeight).build());
 

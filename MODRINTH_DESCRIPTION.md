@@ -20,6 +20,7 @@ Die Mod wurde als leichtgewichtige Fabric-Client-Mod für die GrieferGames-Commu
 - BdT-Daten beim Betreten einer Welt automatisch laden oder manuell aktualisieren
 - Discord-Konto direkt aus der Mod verknüpfen
 - integrierten Taschenrechner und Chat-Rechner verwenden
+- GrieferGames-Server-News im Chat optional ausblenden
 - automatisch auf neue TradeCore-Versionen prüfen
 
 Das Highlight begrenzt die Treffer auf nahe Blöcke und erzeugt die Partikel FPS-schonend.
@@ -74,6 +75,7 @@ The mod is a lightweight Fabric client mod created for the GrieferGames communit
 - automatically load BdT data when joining a world or refresh it manually
 - link your Discord account from inside the mod
 - use the built-in calculator and chat calculator
+- optionally hide GrieferGames server news in chat
 - automatically check for TradeCore updates
 
 The highlighter limits results to nearby blocks and uses performance-conscious particle rendering.

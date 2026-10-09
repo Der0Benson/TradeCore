@@ -6,12 +6,14 @@ import Tradecorev2.client.gui.BdtScreen;
 import Tradecorev2.client.gui.CalculatorScreen;
 import Tradecorev2.client.gui.SettingsScreen;
 import Tradecorev2.client.gui.WelcomeScreen;
+import Tradecorev2.client.util.ServerNewsFilter;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -34,6 +36,7 @@ public class Tradecorev2Client implements ClientModInitializer {
       ConfigManager.initialize();
       UpdateChecker.checkForUpdatesAsync();
       BdtCache.initializeOnGameStart();
+      ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> !ServerNewsFilter.shouldHide(message, overlay));
 
       settingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tradecorev2.open_settings", InputConstants.KEY_UP, KEY_CATEGORY));
       bdtKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tradecorev2.open_bdt", InputConstants.KEY_RIGHT, KEY_CATEGORY));

@@ -15,10 +15,9 @@ Tradecore ist eine Fabric-Client-Mod für den **Block des Tages (BdT)**. Die fr�
 - Ladezustände und Serverfehler direkt in der BdT-Oberfläche anzeigen
 - bei fehlender Discord-Verknüpfung automatisch einen Verifizierungsdialog öffnen
 - Highlight-Treffer auf nahe Blöcke begrenzen und Partikel FPS-schonend erzeugen
+- GrieferGames-Server-News über das Funktionsmenü optional ausblenden
 
 Zusätzlich bleiben der Chat-Rechner, der In-Game-Taschenrechner, der Update-Check sowie die Discord-Verknüpfung erhalten.
-
-Der optionale, separat betriebene Discord-Dienst befindet sich unter [`discord-bot/`](discord-bot/). Discord-Token und Bot-Schlüssel werden nicht in die Mod gepackt.
 
 ## Anforderungen
 

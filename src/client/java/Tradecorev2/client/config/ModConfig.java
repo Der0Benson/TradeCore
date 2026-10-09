@@ -10,6 +10,7 @@ public class ModConfig {
    public int highlightDistance;
    public int highlightRescanSeconds;
    public int highlightParticleAmount;
+   public boolean hideServerNews;
 
    public ModConfig() {
       this.welcomeShown = false;
@@ -17,6 +18,7 @@ public class ModConfig {
       this.highlightDistance = 32;
       this.highlightRescanSeconds = 10;
       this.highlightParticleAmount = 2;
+      this.hideServerNews = false;
    }
 
 }
