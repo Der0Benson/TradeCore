@@ -1,0 +1,14 @@
+[
+  {
+    "modid": "tradecore",
+    "name": "Tradecore",
+    "description": "Tradecore für Minecraft 1.8.9: Block des Tages, Abstimmungen, Vorschläge, Rechner und Block-Highlighting.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "https://mc-tradecore.de",
+    "authorList": ["Der_Benson_", "Juleszlive", "Der_Wolfo_"],
+    "credits": "Tradecore Community",
+    "logoFile": "assets/tradecore/icon.png",
+    "clientSideOnly": true
+  }
+]

@@ -138,6 +138,10 @@ public final class BdtNameUtil {
    }
 
    private static Identifier embeddedIdentifier(String rawName) {
+      if (rawName == null || rawName.isBlank()) {
+         return null;
+      }
+
       String cleaned = rawName.trim().toLowerCase(Locale.ROOT);
       for (String part : cleaned.split("[^a-z0-9_:.\\-/]+")) {
          String candidate = part;
@@ -153,6 +157,10 @@ public final class BdtNameUtil {
    }
 
    private static Identifier flexibleIdentifier(String rawName) {
+      if (rawName == null || rawName.isBlank()) {
+         return null;
+      }
+
       String trimmed = rawName.trim().toLowerCase(Locale.ROOT);
       Identifier direct = Identifier.tryParse(trimmed);
       if (direct != null && (BuiltInRegistries.BLOCK.containsKey(direct) || BuiltInRegistries.ITEM.containsKey(direct) || BuiltInRegistries.ENTITY_TYPE.containsKey(direct))) {
